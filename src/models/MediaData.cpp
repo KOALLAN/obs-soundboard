@@ -92,6 +92,16 @@ QString MediaObj::getPath()
 	return path;
 }
 
+void MediaObj::setImagePath(const QString &newImagePath)
+{
+	imagePath = newImagePath;
+}
+
+QString MediaObj::getImagePath()
+{
+	return imagePath;
+}
+
 obs_hotkey_id MediaObj::getHotkey()
 {
 	return hotkey;
