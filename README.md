@@ -28,6 +28,8 @@ This repository is based on [cg2121/obs-soundboard](https://github.com/cg2121/ob
 
 This is not an official release from the original author. The community update is provided free of charge and remains free software under the same [GNU General Public License version 2](LICENSE). The original license and attribution are preserved.
 
+Community adjustments are maintained at [KOALLAN/obs-soundboard](https://github.com/KOALLAN/obs-soundboard).
+
 ---
 
 ## Português (Brasil)
@@ -42,3 +44,5 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 - pacote portátil para Windows com as pastas `data` e `obs-plugins`.
 
 O projeto original é [cg2121/obs-soundboard](https://github.com/cg2121/obs-soundboard), de autoria de [cg2121](https://github.com/cg2121). Esta modificação não é uma versão oficial do autor original. Ela é distribuída gratuitamente, preservando os créditos e a licença GNU GPL v2 do projeto original.
+
+Os ajustes comunitários são mantidos em [KOALLAN/obs-soundboard](https://github.com/KOALLAN/obs-soundboard).
