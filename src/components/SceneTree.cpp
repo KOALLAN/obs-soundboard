@@ -21,10 +21,14 @@ void SceneTree::SetGridMode(bool grid)
 		setResizeMode(QListView::Adjust);
 		setViewMode(QListView::IconMode);
 		setUniformItemSizes(true);
-		setStyleSheet("*{padding: 0; margin: 0;}");
+		setWordWrap(true);
+		setSpacing(4);
+		setStyleSheet("*{padding: 2px; margin: 0;}");
 	} else {
 		setViewMode(QListView::ListMode);
 		setResizeMode(QListView::Fixed);
+		setIconSize(QSize(32, 32));
+		setSpacing(0);
 		setStyleSheet("");
 	}
 
@@ -66,8 +70,8 @@ void SceneTree::resizeEvent(QResizeEvent *event)
 {
 	if (gridMode) {
 		int scrollWid = verticalScrollBar()->sizeHint().width();
-		const QRect lastItem = visualItemRect(item(count() - 1));
-		const int h = lastItem.y() + lastItem.height();
+		const QRect lastItem = count() > 0 ? visualItemRect(item(count() - 1)) : QRect();
+		const int h = count() > 0 ? lastItem.y() + lastItem.height() : 0;
 
 		if (h < height()) {
 			setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -76,19 +80,23 @@ void SceneTree::resizeEvent(QResizeEvent *event)
 			setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 		}
 
-		int wid = contentsRect().width() - scrollWid - 1;
-		int items = (int)std::ceil((float)wid / maxWidth);
+		int wid = qMax(1, contentsRect().width() - scrollWid - 1);
+		int items = qMax(1, (int)std::ceil((float)wid / maxWidth));
 		int itemWidth = wid / items;
+		int itemSide = qMax(itemHeight, itemWidth);
 
-		setGridSize(QSize(itemWidth, itemHeight));
+		setGridSize(QSize(itemSide, itemSide));
+		setIconSize(QSize(qMax(24, itemSide - 20), qMax(24, itemSide - 52)));
 
 		for (int i = 0; i < count(); i++) {
-			item(i)->setSizeHint(QSize(itemWidth, itemHeight));
+			item(i)->setSizeHint(QSize(itemSide, itemSide));
+			item(i)->setTextAlignment(Qt::AlignCenter);
 		}
 	} else {
 		setGridSize(QSize());
 		for (int i = 0; i < count(); i++) {
 			item(i)->setData(Qt::SizeHintRole, QVariant());
+			item(i)->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 		}
 	}
 
@@ -126,7 +134,7 @@ void SceneTree::dropEvent(QDropEvent *event)
 		QPoint point = event->position().toPoint();
 
 		int x = (float)point.x() / wid * std::ceil(wid / maxWidth);
-		int y = (point.y() + firstItemY) / itemHeight;
+		int y = (point.y() + firstItemY) / qMax(1, gridSize().height());
 
 		int r = x + y * std::ceil(wid / maxWidth);
 
@@ -167,7 +175,7 @@ void SceneTree::RepositionGrid(QDragMoveEvent *event)
 		QPoint point = event->position().toPoint();
 
 		int x = (float)point.x() / wid * std::ceil(wid / maxWidth);
-		int y = (point.y() + firstItemY) / itemHeight;
+		int y = (point.y() + firstItemY) / qMax(1, gridSize().height());
 
 		int r = x + y * std::ceil(wid / maxWidth);
 		int orig = selectedIndexes()[0].row();

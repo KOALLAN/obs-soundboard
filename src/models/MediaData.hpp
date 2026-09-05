@@ -15,6 +15,7 @@ private:
 
 	QString name = "";
 	QString path = "";
+	QString imagePath = "";
 	bool loop = false;
 	float volume = 1.0f;
 
@@ -38,6 +39,9 @@ public:
 
 	void setPath(const QString &newPath);
 	QString getPath();
+
+	void setImagePath(const QString &newImagePath);
+	QString getImagePath();
 
 	obs_hotkey_id getHotkey();
 
