@@ -8,7 +8,6 @@
 #include <QStyledItemDelegate>
 
 #include <memory>
-#include <vector>
 
 class MediaControls;
 class MediaObj;
@@ -27,7 +26,6 @@ private:
 	QListWidgetItem *findItem(MediaObj *obj);
 
 	OBSSourceAutoRelease source;
-	std::vector<OBSSignal> sourceSignals;
 
 	bool actionsEnabled = false;
 	bool hideArtwork = true;
@@ -36,8 +34,8 @@ private:
 
 	void configureSource();
 	void applyArtworkVisibility();
-	void refreshMonitoring();
-	static void onMediaStarted(void *data, calldata_t *calldata);
+	void initializeMonitoring();
+	void applyItemAppearance(MediaObj *obj, QListWidgetItem *item);
 
 private slots:
 	void on_list_itemClicked();
@@ -49,7 +47,7 @@ private slots:
 	void on_actionDuplicate_triggered();
 	void on_actionSettings_triggered();
 
-	MediaObj *add(const QString &name, const QString &path);
+	MediaObj *add(const QString &name, const QString &path, const QString &imagePath = QString());
 	void play(MediaObj *obj);
 
 	void editMediaName();

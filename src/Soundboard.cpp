@@ -20,6 +20,7 @@
 #include <QDockWidget>
 #include <QDragEnterEvent>
 #include <QFileInfo>
+#include <QIcon>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMainWindow>
@@ -27,6 +28,8 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QObject>
+#include <QPixmap>
+#include <QTimer>
 
 #include "moc_Soundboard.cpp"
 
@@ -37,6 +40,23 @@
 
 namespace {
 constexpr const char *HIDE_ARTWORK_FILTER_NAME = "Soundboard - Hide Cover Artwork";
+
+QIcon croppedThumbnail(const QString &imagePath)
+{
+	if (imagePath.isEmpty())
+		return {};
+
+	QPixmap original(imagePath);
+	if (original.isNull())
+		return {};
+
+	constexpr int thumbnailSize = 256;
+	QPixmap scaled = original.scaled(thumbnailSize, thumbnailSize, Qt::KeepAspectRatioByExpanding,
+					 Qt::SmoothTransformation);
+	const int x = (scaled.width() - thumbnailSize) / 2;
+	const int y = (scaled.height() - thumbnailSize) / 2;
+	return QIcon(scaled.copy(x, y, thumbnailSize, thumbnailSize));
+}
 
 QString getDefaultString(QString name = "")
 {
@@ -84,12 +104,6 @@ void onEvent(enum obs_frontend_event event, void *data)
 	};
 }
 } // namespace
-
-void Soundboard::onMediaStarted(void *data, calldata_t *)
-{
-	Soundboard *soundboard = static_cast<Soundboard *>(data);
-	QMetaObject::invokeMethod(soundboard, [soundboard]() { soundboard->refreshMonitoring(); }, Qt::QueuedConnection);
-}
 
 Soundboard::Soundboard(QWidget *parent) : QWidget(parent), ui(new Ui_Soundboard)
 {
@@ -172,11 +186,8 @@ void Soundboard::configureSource()
 	obs_source_set_hidden(source, true);
 	ui->mediaControls->SetSource(source.Get());
 
-	sourceSignals.clear();
-	signal_handler_t *signalHandler = obs_source_get_signal_handler(source);
-	sourceSignals.emplace_back(signalHandler, "media_started", onMediaStarted, this);
-
 	applyArtworkVisibility();
+	initializeMonitoring();
 }
 
 void Soundboard::applyArtworkVisibility()
@@ -198,7 +209,7 @@ void Soundboard::applyArtworkVisibility()
 		obs_source_set_enabled(filter, hideArtwork);
 }
 
-void Soundboard::refreshMonitoring()
+void Soundboard::initializeMonitoring()
 {
 	if (obs_obj_invalid(source))
 		return;
@@ -207,8 +218,27 @@ void Soundboard::refreshMonitoring()
 	if (monitoringType == OBS_MONITORING_TYPE_NONE)
 		return;
 
+	// Rebuild the route once while the source is idle. Repeating this for every
+	// playback can tear down the monitoring output mid-start and create clicks.
 	obs_source_set_monitoring_type(source, OBS_MONITORING_TYPE_NONE);
-	obs_source_set_monitoring_type(source, monitoringType);
+	QTimer::singleShot(0, this, [this, monitoringType]() {
+		if (!obs_obj_invalid(source))
+			obs_source_set_monitoring_type(source, monitoringType);
+	});
+}
+
+void Soundboard::applyItemAppearance(MediaObj *obj, QListWidgetItem *item)
+{
+	if (!obj || !item)
+		return;
+
+	item->setText(obj->getName());
+	item->setToolTip(obj->getName());
+	item->setIcon(croppedThumbnail(obj->getImagePath()));
+	if (ui->list->GetGridMode())
+		item->setTextAlignment(Qt::AlignCenter);
+	else
+		item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 }
 
 OBSDataArray Soundboard::saveMedia()
@@ -226,6 +256,7 @@ OBSDataArray Soundboard::saveMedia()
 		obs_data_set_string(settings, "path", QT_TO_UTF8(obj->getPath()));
 		obs_data_set_bool(settings, "loop", obj->loopEnabled());
 		obs_data_set_double(settings, "volume", (double)obj->getVolume());
+		obs_data_set_string(settings, "image_path", QT_TO_UTF8(obj->getImagePath()));
 
 		OBSDataArrayAutoRelease hotkeyArray = obs_hotkey_save(obj->getHotkey());
 		obs_data_set_array(settings, "sound_hotkey", hotkeyArray);
@@ -243,15 +274,17 @@ void Soundboard::loadMedia(OBSDataArray array)
 
 		obs_data_set_default_string(settings, "name", obs_module_text("Sound"));
 		obs_data_set_default_double(settings, "volume", 1.0);
+		obs_data_set_default_string(settings, "image_path", "");
 
 		QString name = obs_data_get_string(settings, "name");
 		QString path = obs_data_get_string(settings, "path");
 		bool loop = obs_data_get_bool(settings, "loop");
 		float volume = (float)obs_data_get_double(settings, "volume");
+		QString imagePath = obs_data_get_string(settings, "image_path");
 
 		OBSDataArrayAutoRelease hotkeyArray = obs_data_get_array(settings, "sound_hotkey");
 
-		MediaObj *obj = add(name, path);
+		MediaObj *obj = add(name, path, imagePath);
 		obs_hotkey_load(obj->getHotkey(), hotkeyArray);
 		obj->setLoopEnabled(loop);
 		obj->setVolume(volume);
@@ -355,7 +388,6 @@ void Soundboard::load(OBSData saveData)
 
 void Soundboard::clear()
 {
-	sourceSignals.clear();
 	ui->mediaControls->countDownTimer = false;
 	ui->mediaControls->SetSource(nullptr);
 	source = nullptr;
@@ -388,7 +420,6 @@ void Soundboard::play(MediaObj *obj)
 
 	if (prevPath == path) {
 		obs_source_media_restart(source);
-		refreshMonitoring();
 		return;
 	}
 
@@ -399,7 +430,6 @@ void Soundboard::play(MediaObj *obj)
 	obs_data_set_string(settings, "local_file", QT_TO_UTF8(path));
 	obs_data_set_bool(settings, "is_local_file", true);
 	obs_source_update(source, settings);
-	refreshMonitoring();
 }
 
 void Soundboard::itemRenamed(MediaObj *obj)
@@ -407,17 +437,19 @@ void Soundboard::itemRenamed(MediaObj *obj)
 	QListWidgetItem *item = findItem(obj);
 
 	if (item)
-		item->setText(obj->getName());
+		applyItemAppearance(obj, item);
 }
 
-MediaObj *Soundboard::add(const QString &name_, const QString &path)
+MediaObj *Soundboard::add(const QString &name_, const QString &path, const QString &imagePath)
 {
 	QString name = getDefaultString(name_);
 
 	MediaObj *obj = new MediaObj(name, path);
+	obj->setImagePath(imagePath);
 
 	QListWidgetItem *item = new QListWidgetItem(name);
 	item->setData(Qt::UserRole, obj->getUUID());
+	applyItemAppearance(obj, item);
 	ui->list->addItem(item);
 	ui->list->setCurrentItem(item);
 
@@ -438,8 +470,9 @@ void Soundboard::on_actionAdd_triggered()
 		QString path = edit.getPath();
 		bool loop = edit.loopChecked();
 		float volume = edit.getVolume();
+		QString imagePath = edit.getImagePath();
 
-		MediaObj *obj = add(name, path);
+		MediaObj *obj = add(name, path, imagePath);
 		obj->setLoopEnabled(loop);
 		obj->setVolume(volume);
 	};
@@ -464,11 +497,14 @@ void Soundboard::on_actionEdit_triggered()
 		QString path = edit.getPath();
 		bool loop = edit.loopChecked();
 		float volume = edit.getVolume();
+		QString imagePath = edit.getImagePath();
 
 		obj->setName(name);
 		obj->setPath(path);
 		obj->setLoopEnabled(loop);
 		obj->setVolume(volume);
+		obj->setImagePath(imagePath);
+		applyItemAppearance(obj, findItem(obj));
 	};
 
 	connect(&edit, &QDialog::accepted, this, edited);
@@ -477,6 +513,7 @@ void Soundboard::on_actionEdit_triggered()
 	edit.setPath(obj->getPath());
 	edit.setLoopChecked(obj->loopEnabled());
 	edit.setVolume(obj->getVolume());
+	edit.setImagePath(obj->getImagePath());
 	edit.exec();
 
 	prevPath = "";
@@ -544,7 +581,8 @@ void Soundboard::on_actionDuplicate_triggered()
 	QString path = obj->getPath();
 	bool loop = obj->loopEnabled();
 	float volume = obj->getVolume();
-	MediaObj *newObj = add(name, path);
+	QString imagePath = obj->getImagePath();
+	MediaObj *newObj = add(name, path, imagePath);
 	newObj->setLoopEnabled(loop);
 	newObj->setVolume(volume);
 }
