@@ -5,6 +5,7 @@
 #include <obs-hotkey.h>
 #include <obs-module.h>
 #include <util/platform.h>
+#include <util/config-file.h>
 #include <util/util.hpp>
 
 #include "plugin-support.h"
@@ -12,6 +13,7 @@
 #include "components/SceneTree.hpp"
 #include "components/MediaControls.hpp"
 #include "dialogs/MediaEdit.hpp"
+#include "dialogs/SoundboardSettings.hpp"
 #include "models/MediaData.hpp"
 
 #include <QAction>
@@ -34,6 +36,8 @@
 #define MainStr(str) QString(obs_frontend_get_locale_string(str))
 
 namespace {
+constexpr const char *HIDE_ARTWORK_FILTER_NAME = "Soundboard - Hide Cover Artwork";
+
 QString getDefaultString(QString name = "")
 {
 	if (name.isEmpty())
@@ -80,6 +84,12 @@ void onEvent(enum obs_frontend_event event, void *data)
 	};
 }
 } // namespace
+
+void Soundboard::onMediaStarted(void *data, calldata_t *)
+{
+	Soundboard *soundboard = static_cast<Soundboard *>(data);
+	QMetaObject::invokeMethod(soundboard, [soundboard]() { soundboard->refreshMonitoring(); }, Qt::QueuedConnection);
+}
 
 Soundboard::Soundboard(QWidget *parent) : QWidget(parent), ui(new Ui_Soundboard)
 {
@@ -148,12 +158,57 @@ void Soundboard::createSource()
 {
 	if (obs_obj_invalid(source)) {
 		source = obs_source_create("ffmpeg_source", obs_module_text("Soundboard"), nullptr, nullptr);
-		obs_source_set_hidden(source, true);
-
-		ui->mediaControls->SetSource(source.Get());
+		configureSource();
 	}
 
 	obs_set_output_source(63, source);
+}
+
+void Soundboard::configureSource()
+{
+	if (obs_obj_invalid(source))
+		return;
+
+	obs_source_set_hidden(source, true);
+	ui->mediaControls->SetSource(source.Get());
+
+	sourceSignals.clear();
+	signal_handler_t *signalHandler = obs_source_get_signal_handler(source);
+	sourceSignals.emplace_back(signalHandler, "media_started", onMediaStarted, this);
+
+	applyArtworkVisibility();
+}
+
+void Soundboard::applyArtworkVisibility()
+{
+	if (obs_obj_invalid(source))
+		return;
+
+	OBSSourceAutoRelease filter = obs_source_get_filter_by_name(source, HIDE_ARTWORK_FILTER_NAME);
+	if (!filter && hideArtwork) {
+		OBSDataAutoRelease settings = obs_data_create();
+		obs_data_set_double(settings, "opacity", 0.0);
+		filter = obs_source_create_private("color_filter", HIDE_ARTWORK_FILTER_NAME, settings);
+
+		if (filter)
+			obs_source_filter_add(source, filter);
+	}
+
+	if (filter)
+		obs_source_set_enabled(filter, hideArtwork);
+}
+
+void Soundboard::refreshMonitoring()
+{
+	if (obs_obj_invalid(source))
+		return;
+
+	const obs_monitoring_type monitoringType = obs_source_get_monitoring_type(source);
+	if (monitoringType == OBS_MONITORING_TYPE_NONE)
+		return;
+
+	obs_source_set_monitoring_type(source, OBS_MONITORING_TYPE_NONE);
+	obs_source_set_monitoring_type(source, monitoringType);
 }
 
 OBSDataArray Soundboard::saveMedia()
@@ -221,6 +276,7 @@ void Soundboard::save(OBSData saveData)
 	obs_data_set_string(saveData, "dock_geometry", dock->saveGeometry().toBase64().constData());
 	obs_data_set_int(saveData, "dock_area", window->dockWidgetArea(dock));
 	obs_data_set_bool(saveData, "grid_mode", ui->list->GetGridMode());
+	obs_data_set_bool(saveData, "hide_artwork", hideArtwork);
 
 	MediaObj *obj = getCurrentMediaObj();
 
@@ -237,12 +293,11 @@ void Soundboard::loadSource(OBSData saveData)
 	if (sourceData) {
 		obs_data_set_obj(sourceData, "settings", nullptr);
 		source = obs_load_source(sourceData);
-		obs_source_set_hidden(source, true);
 
 		if (obs_obj_invalid(source))
 			return;
 
-		ui->mediaControls->SetSource(source.Get());
+		configureSource();
 	}
 }
 
@@ -250,6 +305,9 @@ void Soundboard::load(OBSData saveData)
 {
 	QMainWindow *window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
 	QDockWidget *dock = window->findChild<QDockWidget *>("SoundboardDock");
+
+	obs_data_set_default_bool(saveData, "hide_artwork", true);
+	hideArtwork = obs_data_get_bool(saveData, "hide_artwork");
 
 	loadSource(saveData);
 
@@ -297,6 +355,7 @@ void Soundboard::load(OBSData saveData)
 
 void Soundboard::clear()
 {
+	sourceSignals.clear();
 	ui->mediaControls->countDownTimer = false;
 	ui->mediaControls->SetSource(nullptr);
 	source = nullptr;
@@ -319,24 +378,28 @@ void Soundboard::clear()
 
 void Soundboard::play(MediaObj *obj)
 {
+	if (!obj || obs_obj_invalid(source))
+		return;
+
 	QString path = obj->getPath();
+	QListWidgetItem *item = findItem(obj);
+	obs_source_set_volume(source, obj->getVolume());
+	ui->list->setCurrentItem(item);
 
 	if (prevPath == path) {
 		obs_source_media_restart(source);
+		refreshMonitoring();
 		return;
 	}
 
 	prevPath = path;
-
-	QListWidgetItem *item = findItem(obj);
 
 	OBSDataAutoRelease settings = obs_data_create();
 	obs_data_set_bool(settings, "looping", obj->loopEnabled());
 	obs_data_set_string(settings, "local_file", QT_TO_UTF8(path));
 	obs_data_set_bool(settings, "is_local_file", true);
 	obs_source_update(source, settings);
-
-	ui->list->setCurrentItem(item);
+	refreshMonitoring();
 }
 
 void Soundboard::itemRenamed(MediaObj *obj)
@@ -374,9 +437,11 @@ void Soundboard::on_actionAdd_triggered()
 		QString name = edit.getName();
 		QString path = edit.getPath();
 		bool loop = edit.loopChecked();
+		float volume = edit.getVolume();
 
 		MediaObj *obj = add(name, path);
 		obj->setLoopEnabled(loop);
+		obj->setVolume(volume);
 	};
 
 	connect(&edit, &QDialog::accepted, this, added);
@@ -398,10 +463,12 @@ void Soundboard::on_actionEdit_triggered()
 		QString name = edit.getName();
 		QString path = edit.getPath();
 		bool loop = edit.loopChecked();
+		float volume = edit.getVolume();
 
 		obj->setName(name);
 		obj->setPath(path);
 		obj->setLoopEnabled(loop);
+		obj->setVolume(volume);
 	};
 
 	connect(&edit, &QDialog::accepted, this, edited);
@@ -409,6 +476,7 @@ void Soundboard::on_actionEdit_triggered()
 	edit.setName(obj->getName());
 	edit.setPath(obj->getPath());
 	edit.setLoopChecked(obj->loopEnabled());
+	edit.setVolume(obj->getVolume());
 	edit.exec();
 
 	prevPath = "";
@@ -475,8 +543,44 @@ void Soundboard::on_actionDuplicate_triggered()
 	QString name = getDefaultString(obj->getName());
 	QString path = obj->getPath();
 	bool loop = obj->loopEnabled();
+	float volume = obj->getVolume();
 	MediaObj *newObj = add(name, path);
 	newObj->setLoopEnabled(loop);
+	newObj->setVolume(volume);
+}
+
+void Soundboard::on_actionSettings_triggered()
+{
+	if (obs_obj_invalid(source))
+		createSource();
+
+	const bool monitoringEnabled =
+		obs_source_get_monitoring_type(source) != OBS_MONITORING_TYPE_NONE;
+	SoundboardSettings settings(monitoringEnabled, hideArtwork, this);
+
+	if (settings.exec() != QDialog::Accepted)
+		return;
+
+	const QByteArray deviceName = settings.deviceName().toUtf8();
+	const QByteArray deviceId = settings.deviceId().toUtf8();
+
+	if (!obs_set_audio_monitoring_device(deviceName.constData(), deviceId.constData())) {
+		QMessageBox::warning(this, QTStr("SoundboardSettings"), QTStr("MonitoringDeviceError"));
+	} else {
+		config_t *profileConfig = obs_frontend_get_profile_config();
+		if (profileConfig) {
+			config_set_string(profileConfig, "Audio", "MonitoringDeviceName", deviceName.constData());
+			config_set_string(profileConfig, "Audio", "MonitoringDeviceId", deviceId.constData());
+			config_save_safe(profileConfig, "tmp", nullptr);
+		}
+	}
+
+	obs_source_set_monitoring_type(source, settings.monitoringEnabled()
+							  ? OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT
+							  : OBS_MONITORING_TYPE_NONE);
+
+	hideArtwork = settings.hideArtwork();
+	applyArtworkVisibility();
 }
 
 void Soundboard::on_list_customContextMenuRequested(const QPoint &pos)
@@ -486,6 +590,7 @@ void Soundboard::on_list_customContextMenuRequested(const QPoint &pos)
 	QMenu popup(this);
 
 	popup.addAction(ui->actionAdd);
+	popup.addAction(ui->actionSettings);
 	popup.addAction(MainStr("Basic.Filters"), this, [this]() { obs_frontend_open_source_filters(source); });
 	popup.addSeparator();
 
@@ -638,7 +743,7 @@ bool MediaRenameDelegate::eventFilter(QObject *editor, QEvent *event)
 }
 
 OBS_DECLARE_MODULE()
-OBS_MODULE_AUTHOR("cg2121");
+OBS_MODULE_AUTHOR("cg2121 (original), KOALLAN (community adjustments)");
 OBS_MODULE_USE_DEFAULT_LOCALE("Soundboard", "en-US")
 
 bool obs_module_load(void)
