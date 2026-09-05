@@ -3,6 +3,8 @@
 #include <util/util.hpp>
 #include <obs-module.h>
 
+#include <algorithm>
+
 #define QTStr(str) QString(obs_module_text(str))
 #define QT_UTF8(str) QString::fromUtf8(str, -1)
 #define QT_TO_UTF8(str) str.toUtf8().constData()
@@ -107,7 +109,7 @@ bool MediaObj::loopEnabled()
 
 void MediaObj::setVolume(float newVolume)
 {
-	volume = newVolume;
+	volume = std::clamp(newVolume, 0.0f, 1.5f);
 }
 
 float MediaObj::getVolume()
