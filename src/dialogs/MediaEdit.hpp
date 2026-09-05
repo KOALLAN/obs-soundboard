@@ -29,4 +29,7 @@ public:
 
 	void setLoopChecked(bool checked);
 	bool loopChecked();
+
+	void setVolume(float volume);
+	float getVolume();
 };
