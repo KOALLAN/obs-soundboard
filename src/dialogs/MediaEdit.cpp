@@ -76,6 +76,16 @@ float MediaEdit::getVolume()
 	return static_cast<float>(ui->volumeSpinBox->value()) / 100.0f;
 }
 
+void MediaEdit::setImagePath(const QString &path)
+{
+	ui->imagePath->setText(path);
+}
+
+QString MediaEdit::getImagePath()
+{
+	return ui->imagePath->text();
+}
+
 void MediaEdit::on_browseButton_clicked()
 {
 	QString folder = ui->path->text();
@@ -90,6 +100,27 @@ void MediaEdit::on_browseButton_clicked()
 
 	if (!fileName.isEmpty())
 		ui->path->setText(fileName);
+}
+
+void MediaEdit::on_imageBrowseButton_clicked()
+{
+	QString folder = ui->imagePath->text();
+
+	if (!folder.isEmpty())
+		folder = QFileInfo(folder).absoluteDir().absolutePath();
+	else
+		folder = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+
+	QString fileName = QFileDialog::getOpenFileName(this, QTStr("OpenButtonImage"), folder,
+							("Images (*.png *.jpg *.jpeg *.webp *.bmp)"));
+
+	if (!fileName.isEmpty())
+		ui->imagePath->setText(fileName);
+}
+
+void MediaEdit::on_imageClearButton_clicked()
+{
+	ui->imagePath->clear();
 }
 
 void MediaEdit::on_buttonBox_clicked(QAbstractButton *button)

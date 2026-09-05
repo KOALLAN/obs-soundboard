@@ -15,6 +15,8 @@ private:
 
 private slots:
 	void on_browseButton_clicked();
+	void on_imageBrowseButton_clicked();
+	void on_imageClearButton_clicked();
 	void on_buttonBox_clicked(QAbstractButton *button);
 
 public:
@@ -32,4 +34,7 @@ public:
 
 	void setVolume(float volume);
 	float getVolume();
+
+	void setImagePath(const QString &path);
+	QString getImagePath();
 };
