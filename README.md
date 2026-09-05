@@ -21,7 +21,7 @@ This fork is based on [cg2121/obs-soundboard](https://github.com/cg2121/obs-soun
 
 ## Installation on Windows
 
-1. Download the latest portable ZIP from this fork's [Releases](../../releases) page.
+1. Download the latest portable ZIP from this fork's [Releases](https://github.com/KOALLAN/obs-soundboard/releases) page.
 2. Close OBS Studio.
 3. Extract the ZIP into the OBS Studio installation directory, merging the `data` and `obs-plugins` folders.
 4. Open OBS Studio and enable **Docks > Soundboard** if the dock is not already visible.
@@ -89,7 +89,7 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 
 ### Instalação
 
-1. Baixe o ZIP portátil mais recente na página de [Releases](../../releases).
+1. Baixe o ZIP portátil mais recente na página de [Releases](https://github.com/KOALLAN/obs-soundboard/releases).
 2. Feche o OBS Studio.
 3. Extraia o conteúdo na pasta do OBS, combinando as pastas `data` e `obs-plugins`.
 4. Abra o OBS e habilite **Painéis > Soundboard**, caso o painel não esteja visível.
