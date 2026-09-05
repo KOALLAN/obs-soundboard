@@ -87,6 +87,8 @@
         <addaction name="actionRemove"/>
         <addaction name="separator"/>
         <addaction name="actionEdit"/>
+        <addaction name="separator"/>
+        <addaction name="actionSettings"/>
        </widget>
       </item>
       <item>
@@ -150,6 +152,24 @@
   <action name="actionDuplicate">
    <property name="text">
     <string>Duplicate</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/settings/images/settings/general.svg</normaloff>:/settings/images/settings/general.svg</iconset>
+   </property>
+   <property name="text">
+    <string>SoundboardSettings</string>
+   </property>
+   <property name="toolTip">
+    <string>SoundboardSettings</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
+   <property name="class" stdset="0">
+    <string>icon-gear</string>
    </property>
   </action>
  </widget>

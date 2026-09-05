@@ -49,6 +49,8 @@ target_sources(
     src/components/MediaControls.hpp
     src/dialogs/MediaEdit.hpp
     src/dialogs/MediaEdit.cpp
+    src/dialogs/SoundboardSettings.hpp
+    src/dialogs/SoundboardSettings.cpp
     src/models/MediaData.hpp
     src/models/MediaData.cpp
     src/forms/MediaControls.ui

@@ -9,6 +9,11 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QStandardPaths>
+#include <QSlider>
+#include <QSpinBox>
+#include <QtMath>
+
+#include <algorithm>
 
 #include "moc_MediaEdit.cpp"
 
@@ -20,6 +25,9 @@ MediaEdit::MediaEdit(QWidget *parent) : QDialog(parent), ui(new Ui_MediaEdit)
 	obs_frontend_push_ui_translation(obs_module_get_string);
 	ui->setupUi(this);
 	obs_frontend_pop_ui_translation();
+
+	connect(ui->volumeSlider, &QSlider::valueChanged, ui->volumeSpinBox, &QSpinBox::setValue);
+	connect(ui->volumeSpinBox, qOverload<int>(&QSpinBox::valueChanged), ui->volumeSlider, &QSlider::setValue);
 }
 
 MediaEdit::~MediaEdit() {}
@@ -55,6 +63,17 @@ void MediaEdit::setLoopChecked(bool checked)
 bool MediaEdit::loopChecked()
 {
 	return ui->loop->isChecked();
+}
+
+void MediaEdit::setVolume(float volume)
+{
+	const int percent = std::clamp(qRound(volume * 100.0f), 0, 150);
+	ui->volumeSpinBox->setValue(percent);
+}
+
+float MediaEdit::getVolume()
+{
+	return static_cast<float>(ui->volumeSpinBox->value()) / 100.0f;
 }
 
 void MediaEdit::on_browseButton_clicked()
