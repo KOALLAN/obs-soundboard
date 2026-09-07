@@ -7,6 +7,8 @@ This fork is based on [cg2121/obs-soundboard](https://github.com/cg2121/obs-soun
 ## Features
 
 - One-click playback from a dock inside OBS Studio.
+- Rounded cards with a 2 px border in `#2B2E38`, turning green (`#22C55E`) only while that sound is playing.
+- Adaptive horizontal spacing that distributes the dock width while preserving the selected button size and a minimum 4 px gap.
 - Per-sound volume from 0% to 150%.
 - Fixed-size square sound cards (64–256 logical pixels, default 100), preserved when reopening OBS.
 - Image layout: fit the whole image at the top or center-crop it to fill the button.
@@ -44,6 +46,12 @@ The toolbar at the bottom of the Soundboard dock provides the main actions:
 Right-click inside the dock to rename or duplicate a sound, open the source filters, or switch between list and grid layouts. Hotkeys can be assigned under **Settings > Hotkeys** in OBS.
 
 Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
+
+### New in 2.0.4: rounded cards and playback indicator
+
+Version 2.0.4 adds rounded corners and a fixed `#2B2E38` border. The currently playing sound has a green `#22C55E` border, including playback through hotkeys. Pausing, stopping, finishing or encountering a playback error returns the border to its normal color. Selecting another card does not move the playback indicator. Images are clipped to the rounded corners.
+
+Horizontal spacing now adapts to the dock width, with a minimum 4 px gap. Cards stay at their configured size; rows keep their compact 4 px vertical spacing. A single column is centered. No additional audio-monitoring refresh timer is used.
 
 ### New in 2.0.3: persistent card layout
 
@@ -86,6 +94,8 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 ### Recursos desta versão
 
 - volume individual de 0% a 150% para cada som;
+- cantos arredondados e contorno de 2 px em `#2B2E38`, verde (`#22C55E`) enquanto o som toca;
+- espaçamento horizontal adaptável à largura do painel, mantendo pelo menos 4 px entre botões e o tamanho escolhido;
 - cartões quadrados de tamanho fixo ajustável (64–256 pixels lógicos, padrão 100), preservado ao reabrir o OBS;
 - imagem inteira na parte de cima ou preenchendo o botão com recorte central, sem distorção;
 - texto em cima, no centro ou embaixo, sempre centralizado horizontalmente;
@@ -109,6 +119,12 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+
+### Novidades da 2.0.4: cantos arredondados e indicador de reprodução
+
+A versão 2.0.4 adiciona cantos arredondados e contorno em `#2B2E38`. Somente o botão do som em reprodução fica com contorno verde (`#22C55E`), inclusive com atalhos. Ao pausar, parar, terminar ou ocorrer erro na reprodução, ele volta à cor normal. Selecionar outro botão não muda o indicador de reprodução. As imagens também respeitam os cantos arredondados.
+
+O espaço horizontal entre os botões se ajusta à largura do painel, com distância mínima de 4 px. O tamanho escolhido dos botões é preservado; as linhas mantêm 4 px de distância vertical. Uma coluna fica centralizada. Esse indicador não acrescenta reinicializações nem um novo temporizador de monitoramento de áudio.
 
 ### Novidades da 2.0.3: aparência salva
 
