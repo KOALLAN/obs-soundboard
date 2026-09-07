@@ -47,6 +47,10 @@ Right-click inside the dock to rename or duplicate a sound, open the source filt
 
 Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
 
+### New in 2.0.5: reliable row filling
+
+Version 2.0.5 accounts for the small internal layout allowance used by Qt when calculating grid columns. This prevents the last card from wrapping to the next row when it visibly fits in the remaining space, including docks displayed with Windows DPI scaling. Button size and the minimum 4 px spacing remain unchanged.
+
 ### New in 2.0.4: rounded cards and playback indicator
 
 Version 2.0.4 adds rounded corners and a fixed `#2B2E38` border. The currently playing sound has a green `#22C55E` border, including playback through hotkeys. Pausing, stopping, finishing or encountering a playback error returns the border to its normal color. Selecting another card does not move the playback indicator. Images are clipped to the rounded corners.
@@ -119,6 +123,10 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+
+### Novidades da 2.0.5: preenchimento correto das linhas
+
+A versão 2.0.5 considera a pequena margem interna usada pelo Qt ao calcular as colunas. Isso evita que o último botão seja empurrado para a linha seguinte quando ainda cabe visualmente no espaço disponível, inclusive com a escala de tela do Windows. O tamanho escolhido e a distância mínima de 4 px permanecem iguais.
 
 ### Novidades da 2.0.4: cantos arredondados e indicador de reprodução
 

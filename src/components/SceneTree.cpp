@@ -71,7 +71,11 @@ void SceneTree::UpdateGridSize()
 	QSize cell;
 	if (gridMode) {
 		const int minimum = maxWidth + 4;
-		const int width = qMax(minimum, viewport()->width());
+		// QListView needs a few logical pixels beyond the nominal grid cells
+		// for its internal layout. Without this allowance, a row that fits
+		// exactly can wrap its last card, especially with Windows DPI scaling.
+		constexpr int layoutAllowance = 4;
+		const int width = qMax(minimum, viewport()->contentsRect().width() - layoutAllowance);
 		const int columns = qBound(1, width / minimum, qMax(1, count()));
 		cell = QSize(width / columns, minimum);
 	}
