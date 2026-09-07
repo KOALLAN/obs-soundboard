@@ -16,6 +16,7 @@ class SceneTree : public QListWidget {
 	int textPosition = 1;
 
 public:
+	enum { PlayingRole = Qt::UserRole + 1 };
 	void SetGridMode(bool grid);
 	bool GetGridMode() const;
 	void SetCardAppearance(int size, int image, int text);
@@ -31,6 +32,7 @@ public:
 
 private:
 	void RefreshLayout();
+	void UpdateGridSize();
 
 protected:
 	virtual void showEvent(QShowEvent *event) override;

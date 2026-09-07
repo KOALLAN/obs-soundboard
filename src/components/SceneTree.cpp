@@ -13,6 +13,8 @@ SceneTree::SceneTree(QWidget *parent_) : QListWidget(parent_)
 	setDragDropMode(InternalMove);
 	setMovement(QListView::Snap);
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	connect(model(), &QAbstractItemModel::rowsRemoved, this,
+		[this]() { QTimer::singleShot(0, this, [this]() { RefreshLayout(); }); });
 }
 
 void SceneTree::SetGridMode(bool grid)
@@ -64,14 +66,26 @@ int SceneTree::GetGridItemHeight() const
 	return maxWidth;
 }
 
+void SceneTree::UpdateGridSize()
+{
+	QSize cell;
+	if (gridMode) {
+		const int minimum = maxWidth + 4;
+		const int width = qMax(minimum, viewport()->width());
+		const int columns = qBound(1, width / minimum, qMax(1, count()));
+		cell = QSize(width / columns, minimum);
+	}
+	if (gridSize() != cell)
+		setGridSize(cell);
+}
+
 void SceneTree::RefreshLayout()
 {
 	// Fixed logical pixels: restoring the dock must never resize the cards.
-	const QSize cell(maxWidth + 4, maxWidth + 4);
-	setGridSize(gridMode ? cell : QSize());
+	UpdateGridSize();
 	setIconSize(gridMode ? QSize(maxWidth - 12, maxWidth - 12) : QSize(32, 32));
 	for (int i = 0; i < count(); i++) {
-		item(i)->setData(Qt::SizeHintRole, gridMode ? QVariant(cell) : QVariant());
+		item(i)->setData(Qt::SizeHintRole, QVariant());
 		item(i)->setTextAlignment(gridMode ? Qt::AlignCenter : Qt::AlignLeft | Qt::AlignVCenter);
 	}
 	doItemsLayout();
@@ -89,7 +103,8 @@ void SceneTree::showEvent(QShowEvent *event)
 void SceneTree::resizeEvent(QResizeEvent *event)
 {
 	QListWidget::resizeEvent(event);
-	// Qt handles wrapping and scroll bars using the same fixed cell size.
+	// Distribute spare horizontal space while keeping each card unchanged.
+	UpdateGridSize();
 	scheduleDelayedItemsLayout();
 }
 
@@ -119,11 +134,12 @@ void SceneTree::dropEvent(QDropEvent *event)
 	}
 
 	if (gridMode && !selectedIndexes().isEmpty()) {
-		const int step = maxWidth + 4;
-		const int columns = qMax(1, viewport()->width() / step);
+		const int stepX = qMax(1, gridSize().width());
+		const int stepY = qMax(1, gridSize().height());
+		const int columns = qMax(1, viewport()->width() / stepX);
 		const QPoint point = event->position().toPoint();
-		const int x = qBound(0, (point.x() + horizontalScrollBar()->value()) / step, columns - 1);
-		const int y = qMax(0, (point.y() + verticalScrollBar()->value()) / step);
+		const int x = qBound(0, (point.x() + horizontalScrollBar()->value()) / stepX, columns - 1);
+		const int y = qMax(0, (point.y() + verticalScrollBar()->value()) / stepY);
 		const int row = qBound(0, x + y * columns, count() - 1);
 		QListWidgetItem *moved = takeItem(selectedIndexes().front().row());
 		insertItem(row, moved);
