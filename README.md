@@ -8,7 +8,9 @@ This fork is based on [cg2121/obs-soundboard](https://github.com/cg2121/obs-soun
 
 - One-click playback from a dock inside OBS Studio.
 - Per-sound volume from 0% to 150%.
-- Square sound cards with centered names.
+- Fixed-size square sound cards (64–256 logical pixels, default 100), preserved when reopening OBS.
+- Image layout: fit the whole image at the top or center-crop it to fill the button.
+- Text at the top, center or bottom, horizontally centered.
 - An optional PNG, JPG, WebP or BMP image for every sound card.
 - Per-sound hotkeys, looping, renaming, duplication and drag-to-reorder.
 - Grid and list layouts.
@@ -37,11 +39,19 @@ The toolbar at the bottom of the Soundboard dock provides the main actions:
 | **+** | Add a sound, choose its audio file, volume, loop state and optional card image. |
 | **−** | Remove the selected sound. |
 | **Pencil** | Edit the selected sound and its card image. |
-| **Gear** | Configure native monitoring and embedded artwork visibility. |
+| **Gear** | Configure button size, image layout, text position, native monitoring and embedded artwork visibility. |
 
 Right-click inside the dock to rename or duplicate a sound, open the source filters, or switch between list and grid layouts. Hotkeys can be assigned under **Settings > Hotkeys** in OBS.
 
 Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
+
+### New in 2.0.3: persistent card layout
+
+Open **Soundboard Settings** (gear) to set the square button size from 64 to 256 logical pixels. Cards wrap into as many columns as the dock fits, without stretching when OBS restores the panel. These settings are saved with the scene collection.
+
+Choose **At the top** to show the entire image above the label, or **Fill the button** to cover the card without distorting the image (edges may be cropped). Text can be at the top, center or bottom. In top-image mode, that position refers to the area below the image; in fill mode, the label overlays the image on a translucent dark background for readability. Long names remain available in the tooltip.
+
+These appearance settings apply to all grid buttons; list mode keeps its compact layout. Changing only appearance does not restart or change the monitoring route. Audio processing is unchanged. In-OBS playback and visual testing are left to the user.
 
 ## Audio monitoring
 
@@ -76,7 +86,9 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 ### Recursos desta versão
 
 - volume individual de 0% a 150% para cada som;
-- cartões quadrados com o nome centralizado;
+- cartões quadrados de tamanho fixo ajustável (64–256 pixels lógicos, padrão 100), preservado ao reabrir o OBS;
+- imagem inteira na parte de cima ou preenchendo o botão com recorte central, sem distorção;
+- texto em cima, no centro ou embaixo, sempre centralizado horizontalmente;
 - imagem opcional em PNG, JPG, WebP ou BMP para cada botão;
 - atalhos, repetição, renomeação, duplicação e reorganização dos sons;
 - modos de visualização em grade e lista;
@@ -97,6 +109,14 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+
+### Novidades da 2.0.3: aparência salva
+
+Na **engrenagem das Configurações do Soundboard**, escolha o tamanho dos botões (64 a 256 pixels lógicos), a disposição da imagem e a posição do texto. O painel passa a organizar a quantidade de colunas sem esticar os botões ao abrir o OBS. As escolhas são salvas com a coleção de cenas.
+
+Com a imagem **na parte de cima**, ela aparece inteira e o texto ocupa a área abaixo dela. No modo **preencher o botão**, a imagem cobre o quadrado sem distorção (com possível recorte nas bordas), e o texto fica sobre ela com um fundo escuro translúcido para facilitar a leitura. A posição em cima/centro/embaixo vale para a área de texto disponível. Nomes longos também podem ser lidos ao passar o mouse sobre o botão.
+
+Esses ajustes valem para todos os botões da grade; o modo lista continua compacto. Alterar somente a aparência não reinicia nem muda a rota de monitoramento. O processamento de áudio não foi alterado. Os testes de reprodução e aparência dentro do OBS ficam com o usuário.
 
 ### Monitoramento
 

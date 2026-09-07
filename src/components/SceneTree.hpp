@@ -11,30 +11,32 @@ class SceneTree : public QListWidget {
 	Q_PROPERTY(int gridItemHeight READ GetGridItemHeight WRITE SetGridItemHeight DESIGNABLE true)
 
 	bool gridMode = false;
-	int maxWidth = 150;
-	int itemHeight = 24;
+	int maxWidth = 100;
+	int imagePlacement = 0;
+	int textPosition = 1;
 
 public:
 	void SetGridMode(bool grid);
-	bool GetGridMode();
+	bool GetGridMode() const;
+	void SetCardAppearance(int size, int image, int text);
+	int GetImagePlacement() const { return imagePlacement; }
+	int GetTextPosition() const { return textPosition; }
 
 	void SetGridItemWidth(int width);
 	void SetGridItemHeight(int height);
-	int GetGridItemWidth();
-	int GetGridItemHeight();
+	int GetGridItemWidth() const;
+	int GetGridItemHeight() const;
 
 	explicit SceneTree(QWidget *parent = nullptr);
 
 private:
-	void RepositionGrid(QDragMoveEvent *event = nullptr);
+	void RefreshLayout();
 
 protected:
-	virtual bool eventFilter(QObject *obj, QEvent *event) override;
+	virtual void showEvent(QShowEvent *event) override;
 	virtual void resizeEvent(QResizeEvent *event) override;
 	virtual void startDrag(Qt::DropActions supportedActions) override;
 	virtual void dropEvent(QDropEvent *event) override;
-	virtual void dragMoveEvent(QDragMoveEvent *event) override;
-	virtual void dragLeaveEvent(QDragLeaveEvent *event) override;
 	virtual void rowsInserted(const QModelIndex &parent, int start, int end) override;
 #if QT_VERSION < QT_VERSION_CHECK(6, 4, 3)
 	virtual void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;

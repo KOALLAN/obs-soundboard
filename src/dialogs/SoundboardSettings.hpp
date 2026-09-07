@@ -5,6 +5,7 @@
 class QCheckBox;
 class QComboBox;
 class QPushButton;
+class QSpinBox;
 
 class SoundboardSettings : public QDialog {
 	Q_OBJECT
@@ -15,14 +16,21 @@ private:
 	QComboBox *monitoringDeviceComboBox = nullptr;
 	QPushButton *refreshButton = nullptr;
 	QPushButton *restartButton = nullptr;
+	QSpinBox *buttonSizeSpinBox = nullptr;
+	QComboBox *imagePlacementComboBox = nullptr;
+	QComboBox *textPositionComboBox = nullptr;
 
 	void reloadDevices();
 
 public:
-	SoundboardSettings(bool monitoringEnabled, bool hideArtwork, QWidget *parent = nullptr);
+	SoundboardSettings(bool monitoringEnabled, bool hideArtwork, int buttonSize, int imagePlacement,
+			   int textPosition, QWidget *parent = nullptr);
 
 	bool monitoringEnabled() const;
 	bool hideArtwork() const;
+	int buttonSize() const;
+	int imagePlacement() const;
+	int textPosition() const;
 	QString deviceName() const;
 	QString deviceId() const;
 };
