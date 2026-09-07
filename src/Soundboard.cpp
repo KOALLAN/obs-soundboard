@@ -821,7 +821,7 @@ void MediaRenameDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
 
 	QStyleOptionViewItem opt(option);
 	initStyleOption(&opt, index);
-	const int side = tree->GetGridItemWidth();
+	const int side = tree->GetRenderedGridItemWidth();
 	const QRect card(opt.rect.topLeft() + QPoint(qMax(2, (opt.rect.width() - side) / 2), 2), QSize(side, side));
 	const QColor border = index.data(SceneTree::PlayingRole).toBool() ? QColor("#22C55E") : QColor("#2B2E38");
 	constexpr qreal radius = 8.0;
@@ -901,8 +901,8 @@ void MediaRenameDelegate::updateEditorGeometry(QWidget *editor, const QStyleOpti
 		return;
 	}
 	QRect rect = option.rect.adjusted(6, 6, -6, -6);
-	rect.setLeft(option.rect.left() + qMax(2, (option.rect.width() - tree->GetGridItemWidth()) / 2) + 6);
-	rect.setWidth(tree->GetGridItemWidth() - 12);
+	rect.setLeft(option.rect.left() + qMax(2, (option.rect.width() - tree->GetRenderedGridItemWidth()) / 2) + 6);
+	rect.setWidth(tree->GetRenderedGridItemWidth() - 12);
 	const int height = qMin(rect.height(), editor->sizeHint().height());
 	rect.setTop(rect.center().y() - height / 2);
 	rect.setHeight(height);

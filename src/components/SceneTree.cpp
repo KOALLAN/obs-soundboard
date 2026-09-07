@@ -69,15 +69,22 @@ int SceneTree::GetGridItemHeight() const
 void SceneTree::UpdateGridSize()
 {
 	QSize cell;
+	renderedWidth = maxWidth;
 	if (gridMode) {
-		const int minimum = maxWidth + 4;
+		constexpr int minimumGap = 4;
+		const int minimum = maxWidth + minimumGap;
 		// QListView needs a few logical pixels beyond the nominal grid cells
 		// for its internal layout. Without this allowance, a row that fits
 		// exactly can wrap its last card, especially with Windows DPI scaling.
 		constexpr int layoutAllowance = 4;
 		const int width = qMax(minimum, viewport()->contentsRect().width() - layoutAllowance);
-		const int columns = qBound(1, width / minimum, qMax(1, count()));
-		cell = QSize(width / columns, minimum);
+		// Gaps exist only between cards, not after the final card. Near a
+		// column boundary, reduce the rendered side by at most the gap width
+		// so Qt can keep the extra column without sacrificing visible spacing.
+		const int columns = qBound(1, (width + minimumGap) / minimum, qMax(1, count()));
+		const int cellWidth = width / columns;
+		renderedWidth = qMin(maxWidth, cellWidth - minimumGap);
+		cell = QSize(cellWidth, renderedWidth + minimumGap);
 	}
 	if (gridSize() != cell)
 		setGridSize(cell);
@@ -87,7 +94,7 @@ void SceneTree::RefreshLayout()
 {
 	// Fixed logical pixels: restoring the dock must never resize the cards.
 	UpdateGridSize();
-	setIconSize(gridMode ? QSize(maxWidth - 12, maxWidth - 12) : QSize(32, 32));
+	setIconSize(gridMode ? QSize(renderedWidth - 12, renderedWidth - 12) : QSize(32, 32));
 	for (int i = 0; i < count(); i++) {
 		item(i)->setData(Qt::SizeHintRole, QVariant());
 		item(i)->setTextAlignment(gridMode ? Qt::AlignCenter : Qt::AlignLeft | Qt::AlignVCenter);

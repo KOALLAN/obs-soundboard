@@ -47,6 +47,10 @@ Right-click inside the dock to rename or duplicate a sound, open the source filt
 
 Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
 
+### New in 2.0.6: full-width grid rows
+
+Version 2.0.6 counts the 4 px spacing only between adjacent cards, instead of reserving another gap after the final card. Near a column boundary, cards may render up to 3 logical pixels smaller than the configured size so an additional column fits while the minimum visible spacing is preserved. This removes the unused card-sized area at the right side of the dock.
+
 ### New in 2.0.5: reliable row filling
 
 Version 2.0.5 accounts for the small internal layout allowance used by Qt when calculating grid columns. This prevents the last card from wrapping to the next row when it visibly fits in the remaining space, including docks displayed with Windows DPI scaling. Button size and the minimum 4 px spacing remain unchanged. Audio files dragged into the dock now use their filename without the extension as the button label.
@@ -123,6 +127,10 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+
+### Novidades da 2.0.6: linhas ocupando toda a largura
+
+A versão 2.0.6 conta os 4 px de distância somente entre botões vizinhos, sem reservar outro espaço depois do último botão. Perto do limite de uma coluna, os cartões podem aparecer até 3 pixels lógicos menores que o tamanho configurado para encaixar uma coluna adicional e preservar a distância mínima visível. Isso elimina a área vazia do tamanho de um botão no lado direito do painel.
 
 ### Novidades da 2.0.5: preenchimento correto das linhas
 

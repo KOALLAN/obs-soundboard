@@ -12,6 +12,7 @@ class SceneTree : public QListWidget {
 
 	bool gridMode = false;
 	int maxWidth = 100;
+	int renderedWidth = 100;
 	int imagePlacement = 0;
 	int textPosition = 1;
 
@@ -27,6 +28,7 @@ public:
 	void SetGridItemHeight(int height);
 	int GetGridItemWidth() const;
 	int GetGridItemHeight() const;
+	int GetRenderedGridItemWidth() const { return renderedWidth; }
 
 	explicit SceneTree(QWidget *parent = nullptr);
 
