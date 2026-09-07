@@ -29,6 +29,8 @@
 #include <QMimeData>
 #include <QObject>
 #include <QPixmap>
+#include <QPainter>
+#include <QStyle>
 #include <QTimer>
 
 #include "moc_Soundboard.cpp"
@@ -41,7 +43,7 @@
 namespace {
 constexpr const char *HIDE_ARTWORK_FILTER_NAME = "Soundboard - Hide Cover Artwork";
 
-QIcon croppedThumbnail(const QString &imagePath)
+QIcon cardThumbnail(const QString &imagePath)
 {
 	if (imagePath.isEmpty())
 		return {};
@@ -50,12 +52,8 @@ QIcon croppedThumbnail(const QString &imagePath)
 	if (original.isNull())
 		return {};
 
-	constexpr int thumbnailSize = 256;
-	QPixmap scaled = original.scaled(thumbnailSize, thumbnailSize, Qt::KeepAspectRatioByExpanding,
-					 Qt::SmoothTransformation);
-	const int x = (scaled.width() - thumbnailSize) / 2;
-	const int y = (scaled.height() - thumbnailSize) / 2;
-	return QIcon(scaled.copy(x, y, thumbnailSize, thumbnailSize));
+	// Decode once when adding/editing the sound, not on every repaint.
+	return QIcon(original.scaled(512, 512, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 }
 
 QString getDefaultString(QString name = "")
@@ -234,7 +232,7 @@ void Soundboard::applyItemAppearance(MediaObj *obj, QListWidgetItem *item)
 
 	item->setText(obj->getName());
 	item->setToolTip(obj->getName());
-	item->setIcon(croppedThumbnail(obj->getImagePath()));
+	item->setIcon(cardThumbnail(obj->getImagePath()));
 	if (ui->list->GetGridMode())
 		item->setTextAlignment(Qt::AlignCenter);
 	else
@@ -310,6 +308,9 @@ void Soundboard::save(OBSData saveData)
 	obs_data_set_int(saveData, "dock_area", window->dockWidgetArea(dock));
 	obs_data_set_bool(saveData, "grid_mode", ui->list->GetGridMode());
 	obs_data_set_bool(saveData, "hide_artwork", hideArtwork);
+	obs_data_set_int(saveData, "button_size", ui->list->GetGridItemWidth());
+	obs_data_set_int(saveData, "button_image_placement", ui->list->GetImagePlacement());
+	obs_data_set_int(saveData, "button_text_position", ui->list->GetTextPosition());
 
 	MediaObj *obj = getCurrentMediaObj();
 
@@ -341,6 +342,12 @@ void Soundboard::load(OBSData saveData)
 
 	obs_data_set_default_bool(saveData, "hide_artwork", true);
 	hideArtwork = obs_data_get_bool(saveData, "hide_artwork");
+	obs_data_set_default_int(saveData, "button_size", 100);
+	obs_data_set_default_int(saveData, "button_image_placement", 0);
+	obs_data_set_default_int(saveData, "button_text_position", 1);
+	ui->list->SetCardAppearance((int)obs_data_get_int(saveData, "button_size"),
+				    (int)obs_data_get_int(saveData, "button_image_placement"),
+				    (int)obs_data_get_int(saveData, "button_text_position"));
 
 	loadSource(saveData);
 
@@ -594,15 +601,20 @@ void Soundboard::on_actionSettings_triggered()
 
 	const bool monitoringEnabled =
 		obs_source_get_monitoring_type(source) != OBS_MONITORING_TYPE_NONE;
-	SoundboardSettings settings(monitoringEnabled, hideArtwork, this);
+	SoundboardSettings settings(monitoringEnabled, hideArtwork, ui->list->GetGridItemWidth(),
+				    ui->list->GetImagePlacement(), ui->list->GetTextPosition(), this);
 
 	if (settings.exec() != QDialog::Accepted)
 		return;
 
 	const QByteArray deviceName = settings.deviceName().toUtf8();
 	const QByteArray deviceId = settings.deviceId().toUtf8();
+	const char *currentDeviceName = nullptr;
+	const char *currentDeviceId = nullptr;
+	obs_get_audio_monitoring_device(&currentDeviceName, &currentDeviceId);
 
-	if (!obs_set_audio_monitoring_device(deviceName.constData(), deviceId.constData())) {
+	if (deviceId != QByteArray(currentDeviceId ? currentDeviceId : "default") &&
+	    !obs_set_audio_monitoring_device(deviceName.constData(), deviceId.constData())) {
 		QMessageBox::warning(this, QTStr("SoundboardSettings"), QTStr("MonitoringDeviceError"));
 	} else {
 		config_t *profileConfig = obs_frontend_get_profile_config();
@@ -613,12 +625,15 @@ void Soundboard::on_actionSettings_triggered()
 		}
 	}
 
-	obs_source_set_monitoring_type(source, settings.monitoringEnabled()
+	if (settings.monitoringEnabled() != monitoringEnabled)
+		obs_source_set_monitoring_type(source, settings.monitoringEnabled()
 							  ? OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT
 							  : OBS_MONITORING_TYPE_NONE);
 
 	hideArtwork = settings.hideArtwork();
 	applyArtworkVisibility();
+	ui->list->SetCardAppearance(settings.buttonSize(), settings.imagePlacement(), settings.textPosition());
+	obs_frontend_save();
 }
 
 void Soundboard::on_list_customContextMenuRequested(const QPoint &pos)
@@ -751,6 +766,111 @@ void Soundboard::mediaNameEdited(QWidget *editor)
 }
 
 MediaRenameDelegate::MediaRenameDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
+
+QSize MediaRenameDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+	const auto *tree = qobject_cast<SceneTree *>(parent());
+	if (tree && tree->GetGridMode()) {
+		const int cell = tree->GetGridItemWidth() + 4;
+		return QSize(cell, cell);
+	}
+	return QStyledItemDelegate::sizeHint(option, index);
+}
+
+void MediaRenameDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+	const auto *tree = qobject_cast<SceneTree *>(parent());
+	if (!tree || !tree->GetGridMode()) {
+		QStyledItemDelegate::paint(painter, option, index);
+		return;
+	}
+
+	QStyleOptionViewItem opt(option);
+	initStyleOption(&opt, index);
+	const int side = tree->GetGridItemWidth();
+	const QRect card(opt.rect.topLeft() + QPoint(2, 2), QSize(side, side));
+	const bool selected = opt.state & QStyle::State_Selected;
+	const bool hovered = opt.state & QStyle::State_MouseOver;
+	const bool fill = tree->GetImagePlacement() == 1;
+	const QPixmap image = opt.icon.pixmap(QSize(512, 512));
+	const bool hasImage = !image.isNull();
+	QColor background = opt.palette.color(selected ? QPalette::Highlight : QPalette::Button);
+	if (hovered && !selected)
+		background = background.lighter(115);
+
+	painter->save();
+	painter->setClipRect(card, Qt::IntersectClip);
+	painter->fillRect(card, background);
+	painter->setRenderHint(QPainter::SmoothPixmapTransform);
+	painter->setFont(opt.font);
+	QRect textArea = card.adjusted(6, 6, -6, -6);
+
+	if (hasImage) {
+		QRect imageArea = fill ? card : card.adjusted(6, 6, -6, -6);
+		if (!fill) {
+			imageArea.setHeight(card.height() * 3 / 5 - 6);
+			textArea.setTop(imageArea.bottom() + 5);
+		}
+		QRectF source(image.rect());
+		QRectF target(imageArea);
+		if (fill) {
+			// Center-crop only in fill mode; never stretch the image.
+			const qreal scale = qMax(target.width() / source.width(), target.height() / source.height());
+			const QSizeF crop(target.width() / scale, target.height() / scale);
+			source = QRectF(source.center() - QPointF(crop.width() / 2, crop.height() / 2), crop);
+		} else {
+			const QSize fitted = image.size().scaled(imageArea.size(), Qt::KeepAspectRatio);
+			target = QRectF(QPointF(imageArea.center()) - QPointF(fitted.width() / 2.0, fitted.height() / 2.0),
+					QSizeF(fitted));
+		}
+		painter->drawPixmap(target, image, source);
+	}
+
+	const int flags = Qt::AlignHCenter | Qt::TextWordWrap | Qt::TextWrapAnywhere;
+	const int textHeight = qMin(textArea.height(), opt.fontMetrics.boundingRect(textArea, flags, opt.text).height());
+	QRect label = textArea;
+	label.setHeight(textHeight);
+	if (tree->GetTextPosition() == 1)
+		label.moveTop(textArea.top() + (textArea.height() - textHeight) / 2);
+	else if (tree->GetTextPosition() == 2)
+		label.moveBottom(textArea.bottom());
+
+	if (hasImage && fill) {
+		painter->fillRect(label.adjusted(-3, -2, 3, 2), QColor(0, 0, 0, 170));
+		painter->setPen(Qt::white);
+	} else {
+		painter->setPen(opt.palette.color(selected ? QPalette::HighlightedText : QPalette::ButtonText));
+	}
+	painter->save();
+	painter->setClipRect(label, Qt::IntersectClip);
+	painter->drawText(label, flags | Qt::AlignTop, opt.text);
+	painter->restore();
+
+	// Keep selection/focus visible even when an image covers the entire card.
+	painter->setBrush(Qt::NoBrush);
+	painter->setPen(QPen(opt.palette.color(selected ? QPalette::HighlightedText : QPalette::Mid), selected ? 2 : 1));
+	painter->drawRect(card.adjusted(1, 1, -1, -1));
+	if (opt.state & QStyle::State_HasFocus) {
+		painter->setPen(QPen(opt.palette.color(QPalette::HighlightedText), 1, Qt::DotLine));
+		painter->drawRect(card.adjusted(3, 3, -3, -3));
+	}
+	painter->restore();
+}
+
+void MediaRenameDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option,
+					     const QModelIndex &index) const
+{
+	const auto *tree = qobject_cast<SceneTree *>(parent());
+	if (!tree || !tree->GetGridMode()) {
+		QStyledItemDelegate::updateEditorGeometry(editor, option, index);
+		return;
+	}
+	QRect rect = option.rect.adjusted(6, 6, -6, -6);
+	const int height = qMin(rect.height(), editor->sizeHint().height());
+	rect.setTop(rect.center().y() - height / 2);
+	rect.setHeight(height);
+	editor->setGeometry(rect);
+}
 
 void MediaRenameDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
 {
