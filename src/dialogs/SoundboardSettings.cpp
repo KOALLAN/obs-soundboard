@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QVBoxLayout>
 
 #define QTStr(str) QString(obs_module_text(str))
@@ -28,7 +29,8 @@ bool addMonitoringDevice(void *data, const char *name, const char *id)
 }
 } // namespace
 
-SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork_, QWidget *parent)
+SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork_, int buttonSize_, int imagePlacement_,
+				     int textPosition_, QWidget *parent)
 	: QDialog(parent)
 {
 	setWindowTitle(QTStr("SoundboardSettings"));
@@ -54,6 +56,30 @@ SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork
 	formLayout->addRow(QString(), monitoringCheckBox);
 	formLayout->addRow(QTStr("MonitoringDevice"), deviceLayout);
 	formLayout->addRow(QString(), hideArtworkCheckBox);
+
+	buttonSizeSpinBox = new QSpinBox(this);
+	buttonSizeSpinBox->setRange(64, 256);
+	buttonSizeSpinBox->setSuffix(QStringLiteral(" px"));
+	buttonSizeSpinBox->setValue(buttonSize_);
+	buttonSizeSpinBox->setToolTip(QTStr("ButtonSize.Tooltip"));
+
+	imagePlacementComboBox = new QComboBox(this);
+	imagePlacementComboBox->addItem(QTStr("ImagePlacement.Top"));
+	imagePlacementComboBox->addItem(QTStr("ImagePlacement.Fill"));
+	imagePlacementComboBox->setCurrentIndex(imagePlacement_);
+
+	textPositionComboBox = new QComboBox(this);
+	textPositionComboBox->addItem(QTStr("TextPosition.Top"));
+	textPositionComboBox->addItem(QTStr("TextPosition.Center"));
+	textPositionComboBox->addItem(QTStr("TextPosition.Bottom"));
+	textPositionComboBox->setCurrentIndex(textPosition_);
+
+	formLayout->addRow(QTStr("ButtonSize"), buttonSizeSpinBox);
+	formLayout->addRow(QTStr("ImagePlacement"), imagePlacementComboBox);
+	formLayout->addRow(QTStr("TextPosition"), textPositionComboBox);
+	QLabel *appearanceNotice = new QLabel(QTStr("CardAppearanceNotice"), this);
+	appearanceNotice->setWordWrap(true);
+	formLayout->addRow(appearanceNotice);
 
 	QLabel *notice = new QLabel(QTStr("GlobalMonitoringNotice"), this);
 	notice->setWordWrap(true);
@@ -124,6 +150,21 @@ bool SoundboardSettings::hideArtwork() const
 QString SoundboardSettings::deviceName() const
 {
 	return monitoringDeviceComboBox->currentText();
+}
+
+int SoundboardSettings::buttonSize() const
+{
+	return buttonSizeSpinBox->value();
+}
+
+int SoundboardSettings::imagePlacement() const
+{
+	return imagePlacementComboBox->currentIndex();
+}
+
+int SoundboardSettings::textPosition() const
+{
+	return textPositionComboBox->currentIndex();
 }
 
 QString SoundboardSettings::deviceId() const
