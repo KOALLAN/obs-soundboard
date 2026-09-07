@@ -49,7 +49,7 @@ Card images are referenced by their file path. If an image is moved or deleted, 
 
 ### New in 2.0.5: reliable row filling
 
-Version 2.0.5 accounts for the small internal layout allowance used by Qt when calculating grid columns. This prevents the last card from wrapping to the next row when it visibly fits in the remaining space, including docks displayed with Windows DPI scaling. Button size and the minimum 4 px spacing remain unchanged.
+Version 2.0.5 accounts for the small internal layout allowance used by Qt when calculating grid columns. This prevents the last card from wrapping to the next row when it visibly fits in the remaining space, including docks displayed with Windows DPI scaling. Button size and the minimum 4 px spacing remain unchanged. Audio files dragged into the dock now use their filename without the extension as the button label.
 
 ### New in 2.0.4: rounded cards and playback indicator
 
@@ -126,7 +126,7 @@ As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for m
 
 ### Novidades da 2.0.5: preenchimento correto das linhas
 
-A versão 2.0.5 considera a pequena margem interna usada pelo Qt ao calcular as colunas. Isso evita que o último botão seja empurrado para a linha seguinte quando ainda cabe visualmente no espaço disponível, inclusive com a escala de tela do Windows. O tamanho escolhido e a distância mínima de 4 px permanecem iguais.
+A versão 2.0.5 considera a pequena margem interna usada pelo Qt ao calcular as colunas. Isso evita que o último botão seja empurrado para a linha seguinte quando ainda cabe visualmente no espaço disponível, inclusive com a escala de tela do Windows. O tamanho escolhido e a distância mínima de 4 px permanecem iguais. Arquivos de áudio arrastados para o painel agora usam como nome do botão somente o nome do arquivo, sem a extensão.
 
 ### Novidades da 2.0.4: cantos arredondados e indicador de reprodução
 

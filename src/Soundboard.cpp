@@ -746,7 +746,7 @@ void Soundboard::dropEvent(QDropEvent *event)
 	{
 		QString path = url.toLocalFile();
 		QFileInfo fi(path);
-		QString name = fi.fileName();
+		QString name = fi.completeBaseName();
 		QString ext = fi.suffix();
 
 		if (!supportedExt.contains(ext))
