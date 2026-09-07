@@ -30,6 +30,7 @@
 #include <QObject>
 #include <QPixmap>
 #include <QPainter>
+#include <QPainterPath>
 #include <QStyle>
 #include <QTimer>
 
@@ -134,10 +135,13 @@ Soundboard::Soundboard(QWidget *parent) : QWidget(parent), ui(new Ui_Soundboard)
 	addAction(renameMedia);
 
 	connect(ui->list->itemDelegate(), &QAbstractItemDelegate::closeEditor, this, &Soundboard::mediaNameEdited);
+	// Reuse the existing progress timer to reflect errors as well as playback events.
+	connect(&ui->mediaControls->mediaTimer, &QTimer::timeout, this, &Soundboard::updatePlaybackAppearance);
 }
 
 Soundboard::~Soundboard()
 {
+	playbackSignals.clear();
 	obs_frontend_remove_event_callback(onEvent, this);
 	obs_frontend_remove_save_callback(onSave, this);
 }
@@ -178,11 +182,24 @@ void Soundboard::createSource()
 
 void Soundboard::configureSource()
 {
+	playbackSignals.clear();
 	if (obs_obj_invalid(source))
 		return;
 
 	obs_source_set_hidden(source, true);
 	ui->mediaControls->SetSource(source.Get());
+	auto playbackChanged = [](void *data, calldata_t *) {
+		auto *soundboard = static_cast<Soundboard *>(data);
+		// OBS can emit from decoder threads. Read current state on the UI thread
+		// so a delayed event from the previous file cannot highlight the wrong card.
+		QMetaObject::invokeMethod(soundboard, [soundboard]() { soundboard->updatePlaybackAppearance(); },
+					 Qt::QueuedConnection);
+	};
+	for (const char *event : {"media_started", "media_play", "media_pause", "media_restart", "media_stopped",
+				 "media_ended"}) {
+		playbackSignals.emplace_back(obs_source_get_signal_handler(source), event, playbackChanged, this);
+	}
+	updatePlaybackAppearance();
 
 	applyArtworkVisibility();
 	initializeMonitoring();
@@ -223,6 +240,19 @@ void Soundboard::initializeMonitoring()
 		if (!obs_obj_invalid(source))
 			obs_source_set_monitoring_type(source, monitoringType);
 	});
+}
+
+void Soundboard::updatePlaybackAppearance()
+{
+	const bool playing = !obs_obj_invalid(source) &&
+			     obs_source_media_get_state(source) == OBS_MEDIA_STATE_PLAYING;
+	const QString uuid = playing && activeMedia ? activeMedia->getUUID() : QString();
+	for (int i = 0; i < ui->list->count(); i++) {
+		auto *item = ui->list->item(i);
+		const bool active = !uuid.isEmpty() && item->data(Qt::UserRole).toString() == uuid;
+		if (item->data(SceneTree::PlayingRole).toBool() != active)
+			item->setData(SceneTree::PlayingRole, active);
+	}
 }
 
 void Soundboard::applyItemAppearance(MediaObj *obj, QListWidgetItem *item)
@@ -395,6 +425,8 @@ void Soundboard::load(OBSData saveData)
 
 void Soundboard::clear()
 {
+	playbackSignals.clear();
+	activeMedia = nullptr;
 	ui->mediaControls->countDownTimer = false;
 	ui->mediaControls->SetSource(nullptr);
 	source = nullptr;
@@ -422,11 +454,13 @@ void Soundboard::play(MediaObj *obj)
 
 	QString path = obj->getPath();
 	QListWidgetItem *item = findItem(obj);
+	activeMedia = obj;
 	obs_source_set_volume(source, obj->getVolume());
 	ui->list->setCurrentItem(item);
 
 	if (prevPath == path) {
 		obs_source_media_restart(source);
+		updatePlaybackAppearance();
 		return;
 	}
 
@@ -437,6 +471,7 @@ void Soundboard::play(MediaObj *obj)
 	obs_data_set_string(settings, "local_file", QT_TO_UTF8(path));
 	obs_data_set_bool(settings, "is_local_file", true);
 	obs_source_update(source, settings);
+	updatePlaybackAppearance();
 }
 
 void Soundboard::itemRenamed(MediaObj *obj)
@@ -771,8 +806,7 @@ QSize MediaRenameDelegate::sizeHint(const QStyleOptionViewItem &option, const QM
 {
 	const auto *tree = qobject_cast<SceneTree *>(parent());
 	if (tree && tree->GetGridMode()) {
-		const int cell = tree->GetGridItemWidth() + 4;
-		return QSize(cell, cell);
+		return tree->gridSize();
 	}
 	return QStyledItemDelegate::sizeHint(option, index);
 }
@@ -788,7 +822,9 @@ void MediaRenameDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
 	QStyleOptionViewItem opt(option);
 	initStyleOption(&opt, index);
 	const int side = tree->GetGridItemWidth();
-	const QRect card(opt.rect.topLeft() + QPoint(2, 2), QSize(side, side));
+	const QRect card(opt.rect.topLeft() + QPoint(qMax(2, (opt.rect.width() - side) / 2), 2), QSize(side, side));
+	const QColor border = index.data(SceneTree::PlayingRole).toBool() ? QColor("#22C55E") : QColor("#2B2E38");
+	constexpr qreal radius = 8.0;
 	const bool selected = opt.state & QStyle::State_Selected;
 	const bool hovered = opt.state & QStyle::State_MouseOver;
 	const bool fill = tree->GetImagePlacement() == 1;
@@ -799,7 +835,10 @@ void MediaRenameDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
 		background = background.lighter(115);
 
 	painter->save();
-	painter->setClipRect(card, Qt::IntersectClip);
+	painter->setRenderHint(QPainter::Antialiasing);
+	QPainterPath outline;
+	outline.addRoundedRect(QRectF(card), radius, radius);
+	painter->setClipPath(outline, Qt::IntersectClip);
 	painter->fillRect(card, background);
 	painter->setRenderHint(QPainter::SmoothPixmapTransform);
 	painter->setFont(opt.font);
@@ -846,14 +885,10 @@ void MediaRenameDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
 	painter->drawText(label, flags | Qt::AlignTop, opt.text);
 	painter->restore();
 
-	// Keep selection/focus visible even when an image covers the entire card.
+	// Playback, not selection, determines the border color.
 	painter->setBrush(Qt::NoBrush);
-	painter->setPen(QPen(opt.palette.color(selected ? QPalette::HighlightedText : QPalette::Mid), selected ? 2 : 1));
-	painter->drawRect(card.adjusted(1, 1, -1, -1));
-	if (opt.state & QStyle::State_HasFocus) {
-		painter->setPen(QPen(opt.palette.color(QPalette::HighlightedText), 1, Qt::DotLine));
-		painter->drawRect(card.adjusted(3, 3, -3, -3));
-	}
+	painter->setPen(QPen(border, 2));
+	painter->drawRoundedRect(QRectF(card).adjusted(1, 1, -1, -1), radius - 1, radius - 1);
 	painter->restore();
 }
 
@@ -866,6 +901,8 @@ void MediaRenameDelegate::updateEditorGeometry(QWidget *editor, const QStyleOpti
 		return;
 	}
 	QRect rect = option.rect.adjusted(6, 6, -6, -6);
+	rect.setLeft(option.rect.left() + qMax(2, (option.rect.width() - tree->GetGridItemWidth()) / 2) + 6);
+	rect.setWidth(tree->GetGridItemWidth() - 12);
 	const int height = qMin(rect.height(), editor->sizeHint().height());
 	rect.setTop(rect.center().y() - height / 2);
 	rect.setHeight(height);

@@ -26,6 +26,8 @@ private:
 	QListWidgetItem *findItem(MediaObj *obj);
 
 	OBSSourceAutoRelease source;
+	std::vector<OBSSignal> playbackSignals;
+	QPointer<MediaObj> activeMedia;
 
 	bool actionsEnabled = false;
 	bool hideArtwork = true;
@@ -35,6 +37,7 @@ private:
 	void configureSource();
 	void applyArtworkVisibility();
 	void initializeMonitoring();
+	void updatePlaybackAppearance();
 	void applyItemAppearance(MediaObj *obj, QListWidgetItem *item);
 
 private slots:
