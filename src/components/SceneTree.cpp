@@ -27,8 +27,10 @@ void SceneTree::SetGridMode(bool grid)
 	setUniformItemSizes(true);
 	setWordWrap(grid);
 	setSpacing(0);
+	setFlow(QListView::LeftToRight);
+	setWrapping(true);
 	setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-	setHorizontalScrollBarPolicy(grid ? Qt::ScrollBarAsNeeded : Qt::ScrollBarAlwaysOff);
+	setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	setStyleSheet("");
 	RefreshLayout();
 }
@@ -38,9 +40,10 @@ bool SceneTree::GetGridMode() const
 	return gridMode;
 }
 
-void SceneTree::SetCardAppearance(int size, int image, int text)
+void SceneTree::SetCardAppearance(int minimumSize, int maximumSize, int image, int text)
 {
-	maxWidth = qBound(64, size, 256);
+	minWidth = qBound(64, minimumSize, 256);
+	maxWidth = qBound(minWidth, maximumSize, 256);
 	imagePlacement = qBound(0, image, 1);
 	textPosition = qBound(0, text, 2);
 	RefreshLayout();
@@ -48,7 +51,7 @@ void SceneTree::SetCardAppearance(int size, int image, int text)
 
 void SceneTree::SetGridItemWidth(int width)
 {
-	SetCardAppearance(width, imagePlacement, textPosition);
+	SetCardAppearance(qMin(minWidth, width), width, imagePlacement, textPosition);
 }
 
 void SceneTree::SetGridItemHeight(int height)
@@ -72,15 +75,29 @@ void SceneTree::UpdateGridSize()
 	renderedWidth = maxWidth;
 	if (gridMode) {
 		constexpr int minimumGap = 4;
-		const int minimum = maxWidth + minimumGap;
-		const int width = qMax(minimum, viewport()->contentsRect().width());
-		// Gaps exist only between cards, not after the final card. Near a
-		// column boundary, reduce the rendered side by at most the gap width
-		// so Qt can keep the extra column without sacrificing visible spacing.
-		const int columns = qBound(1, (width + minimumGap) / minimum, qMax(1, count()));
-		const int cellWidth = width / columns;
-		renderedWidth = qMin(maxWidth, cellWidth - minimumGap);
-		cell = QSize(cellWidth, renderedWidth + minimumGap);
+		constexpr int layoutSafety = 1;
+		const QMargins oldMargins = viewportMargins();
+		const int width = qMax(minWidth + minimumGap + layoutSafety,
+				       viewport()->contentsRect().width() + oldMargins.left() + oldMargins.right());
+		const int columnsByMinimum = qMax(1, (width - layoutSafety) / (minWidth + minimumGap));
+		const int columns = qMin(qMax(1, count()), columnsByMinimum);
+
+		// Grow every card with the dock until the configured maximum is
+		// reached. A one-pixel safety allowance prevents QListView from
+		// wrapping the final column at exact DPI-scaled boundaries.
+		renderedWidth = qBound(minWidth, (width - layoutSafety) / columns - minimumGap, maxWidth);
+		const int cellWidth = renderedWidth + minimumGap;
+		const int contentWidth = columns * cellWidth + layoutSafety;
+		const int spareWidth = qMax(0, width - contentWidth);
+		const int leftMargin = spareWidth / 2;
+		const int rightMargin = spareWidth - leftMargin;
+		if (oldMargins.left() != leftMargin || oldMargins.right() != rightMargin || oldMargins.top() != 0 ||
+		    oldMargins.bottom() != 0)
+			setViewportMargins(leftMargin, 0, rightMargin, 0);
+
+		cell = QSize(cellWidth, cellWidth);
+	} else if (viewportMargins() != QMargins()) {
+		setViewportMargins(0, 0, 0, 0);
 	}
 	if (gridSize() != cell)
 		setGridSize(cell);
@@ -88,7 +105,7 @@ void SceneTree::UpdateGridSize()
 
 void SceneTree::RefreshLayout()
 {
-	// Fixed logical pixels: restoring the dock must never resize the cards.
+	// Recalculate responsive card geometry after restores and data changes.
 	UpdateGridSize();
 	setIconSize(gridMode ? QSize(renderedWidth - 12, renderedWidth - 12) : QSize(32, 32));
 	for (int i = 0; i < count(); i++) {
@@ -110,7 +127,7 @@ void SceneTree::showEvent(QShowEvent *event)
 void SceneTree::resizeEvent(QResizeEvent *event)
 {
 	QListWidget::resizeEvent(event);
-	// Distribute spare horizontal space while keeping each card unchanged.
+	// Resize cards within their configured range and keep the grid centered.
 	UpdateGridSize();
 	scheduleDelayedItemsLayout();
 }

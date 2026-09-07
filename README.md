@@ -8,9 +8,10 @@ This fork is based on [cg2121/obs-soundboard](https://github.com/cg2121/obs-soun
 
 - One-click playback from a dock inside OBS Studio.
 - Rounded cards with a 2 px border in `#2B2E38`, turning green (`#22C55E`) only while that sound is playing.
-- Adaptive horizontal spacing that distributes the dock width while preserving the selected button size and a minimum 4 px gap.
+- Responsive square cards that grow and shrink between configurable minimum and maximum sizes.
+- Compact 4 px spacing with equal left and right margins around the centered grid.
 - Per-sound volume from 0% to 150%.
-- Fixed-size square sound cards (64–256 logical pixels, default 100), preserved when reopening OBS.
+- Configurable minimum and maximum card sizes (64–256 logical pixels), preserved when reopening OBS.
 - Image layout: fit the whole image at the top or center-crop it to fill the button.
 - Text at the top, center or bottom, horizontally centered.
 - An optional PNG, JPG, WebP or BMP image for every sound card.
@@ -41,11 +42,17 @@ The toolbar at the bottom of the Soundboard dock provides the main actions:
 | **+** | Add a sound, choose its audio file, volume, loop state and optional card image. |
 | **−** | Remove the selected sound. |
 | **Pencil** | Edit the selected sound and its card image. |
-| **Gear** | Configure button size, image layout, text position, native monitoring and embedded artwork visibility. |
+| **Gear** | Configure minimum and maximum button sizes, image layout, text position, native monitoring and embedded artwork visibility. |
 
 Right-click inside the dock to rename or duplicate a sound, open the source filters, or switch between list and grid layouts. Hotkeys can be assigned under **Settings > Hotkeys** in OBS.
 
 Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
+
+### New in 2.0.8: responsive and centered cards
+
+Version 2.0.8 replaces the fixed card size with configurable minimum and maximum sizes. The grid chooses how many columns fit at the minimum size, then grows every square card evenly until the configured maximum is reached. The 4 px gap stays compact instead of absorbing unused width, and any remaining space is split equally between the left and right sides of the grid.
+
+A one-pixel internal layout guard prevents the final column from wrapping at exact Windows DPI boundaries. Existing collections migrate to an 80 px minimum and a maximum of at least 160 px; both values can be changed under **Soundboard Settings** and are saved with the scene collection. The grid remains aligned to the top so controls do not move vertically as sounds are added.
 
 ### New in 2.0.7: DPI boundary correction
 
@@ -107,8 +114,9 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 
 - volume individual de 0% a 150% para cada som;
 - cantos arredondados e contorno de 2 px em `#2B2E38`, verde (`#22C55E`) enquanto o som toca;
-- espaçamento horizontal adaptável à largura do painel, mantendo pelo menos 4 px entre botões e o tamanho escolhido;
-- cartões quadrados de tamanho fixo ajustável (64–256 pixels lógicos, padrão 100), preservado ao reabrir o OBS;
+- cartões quadrados responsivos, que aumentam ou diminuem entre os tamanhos mínimo e máximo configurados;
+- distância compacta de 4 px entre os botões e margens iguais à esquerda e à direita da grade centralizada;
+- tamanhos mínimo e máximo ajustáveis entre 64 e 256 pixels lógicos, preservados ao reabrir o OBS;
 - imagem inteira na parte de cima ou preenchendo o botão com recorte central, sem distorção;
 - texto em cima, no centro ou embaixo, sempre centralizado horizontalmente;
 - imagem opcional em PNG, JPG, WebP ou BMP para cada botão;
@@ -131,6 +139,12 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+
+### Novidades da 2.0.8: botões responsivos e centralizados
+
+A versão 2.0.8 troca o tamanho fixo por dois controles: **tamanho mínimo** e **tamanho máximo**. A grade calcula quantas colunas cabem usando o mínimo e aumenta igualmente todos os cartões até atingir o máximo. A distância entre eles permanece compacta em 4 px; qualquer largura que ainda sobrar é dividida igualmente entre as laterais esquerda e direita.
+
+Uma proteção interna de um pixel evita que a última coluna pule de linha exatamente nos limites criados pela escala de tela do Windows. Coleções existentes passam a usar mínimo de 80 px e máximo de pelo menos 160 px; os dois valores podem ser alterados nas **Configurações do Soundboard** e ficam salvos com a coleção de cenas. A grade continua encostada no topo para que os controles não mudem verticalmente quando novos sons forem adicionados.
 
 ### Novidades da 2.0.7: correção no limite com escala de tela
 

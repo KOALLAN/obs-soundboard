@@ -338,7 +338,9 @@ void Soundboard::save(OBSData saveData)
 	obs_data_set_int(saveData, "dock_area", window->dockWidgetArea(dock));
 	obs_data_set_bool(saveData, "grid_mode", ui->list->GetGridMode());
 	obs_data_set_bool(saveData, "hide_artwork", hideArtwork);
-	obs_data_set_int(saveData, "button_size", ui->list->GetGridItemWidth());
+	obs_data_set_int(saveData, "button_size", ui->list->GetMaximumGridItemWidth());
+	obs_data_set_int(saveData, "button_min_size", ui->list->GetMinimumGridItemWidth());
+	obs_data_set_int(saveData, "button_max_size", ui->list->GetMaximumGridItemWidth());
 	obs_data_set_int(saveData, "button_image_placement", ui->list->GetImagePlacement());
 	obs_data_set_int(saveData, "button_text_position", ui->list->GetTextPosition());
 
@@ -372,10 +374,17 @@ void Soundboard::load(OBSData saveData)
 
 	obs_data_set_default_bool(saveData, "hide_artwork", true);
 	hideArtwork = obs_data_get_bool(saveData, "hide_artwork");
-	obs_data_set_default_int(saveData, "button_size", 100);
+	obs_data_set_default_int(saveData, "button_size", 160);
+	obs_data_set_default_int(saveData, "button_min_size", 80);
+	obs_data_set_default_int(saveData, "button_max_size", 160);
 	obs_data_set_default_int(saveData, "button_image_placement", 0);
 	obs_data_set_default_int(saveData, "button_text_position", 1);
-	ui->list->SetCardAppearance((int)obs_data_get_int(saveData, "button_size"),
+	const int legacyButtonSize = (int)obs_data_get_int(saveData, "button_size");
+	const int minimumButtonSize = (int)obs_data_get_int(saveData, "button_min_size");
+	const int maximumButtonSize = obs_data_has_user_value(saveData, "button_max_size")
+				      ? (int)obs_data_get_int(saveData, "button_max_size")
+				      : qMax(160, legacyButtonSize);
+	ui->list->SetCardAppearance(minimumButtonSize, maximumButtonSize,
 				    (int)obs_data_get_int(saveData, "button_image_placement"),
 				    (int)obs_data_get_int(saveData, "button_text_position"));
 
@@ -636,8 +645,9 @@ void Soundboard::on_actionSettings_triggered()
 
 	const bool monitoringEnabled =
 		obs_source_get_monitoring_type(source) != OBS_MONITORING_TYPE_NONE;
-	SoundboardSettings settings(monitoringEnabled, hideArtwork, ui->list->GetGridItemWidth(),
-				    ui->list->GetImagePlacement(), ui->list->GetTextPosition(), this);
+	SoundboardSettings settings(monitoringEnabled, hideArtwork, ui->list->GetMinimumGridItemWidth(),
+				    ui->list->GetMaximumGridItemWidth(), ui->list->GetImagePlacement(),
+				    ui->list->GetTextPosition(), this);
 
 	if (settings.exec() != QDialog::Accepted)
 		return;
@@ -667,7 +677,8 @@ void Soundboard::on_actionSettings_triggered()
 
 	hideArtwork = settings.hideArtwork();
 	applyArtworkVisibility();
-	ui->list->SetCardAppearance(settings.buttonSize(), settings.imagePlacement(), settings.textPosition());
+	ui->list->SetCardAppearance(settings.minimumButtonSize(), settings.maximumButtonSize(),
+				    settings.imagePlacement(), settings.textPosition());
 	obs_frontend_save();
 }
 

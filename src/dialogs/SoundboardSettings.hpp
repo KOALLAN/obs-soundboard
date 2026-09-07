@@ -16,19 +16,21 @@ private:
 	QComboBox *monitoringDeviceComboBox = nullptr;
 	QPushButton *refreshButton = nullptr;
 	QPushButton *restartButton = nullptr;
-	QSpinBox *buttonSizeSpinBox = nullptr;
+	QSpinBox *minimumButtonSizeSpinBox = nullptr;
+	QSpinBox *maximumButtonSizeSpinBox = nullptr;
 	QComboBox *imagePlacementComboBox = nullptr;
 	QComboBox *textPositionComboBox = nullptr;
 
 	void reloadDevices();
 
 public:
-	SoundboardSettings(bool monitoringEnabled, bool hideArtwork, int buttonSize, int imagePlacement,
-			   int textPosition, QWidget *parent = nullptr);
+	SoundboardSettings(bool monitoringEnabled, bool hideArtwork, int minimumButtonSize, int maximumButtonSize,
+			   int imagePlacement, int textPosition, QWidget *parent = nullptr);
 
 	bool monitoringEnabled() const;
 	bool hideArtwork() const;
-	int buttonSize() const;
+	int minimumButtonSize() const;
+	int maximumButtonSize() const;
 	int imagePlacement() const;
 	int textPosition() const;
 	QString deviceName() const;

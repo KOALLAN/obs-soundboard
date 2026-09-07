@@ -11,8 +11,9 @@ class SceneTree : public QListWidget {
 	Q_PROPERTY(int gridItemHeight READ GetGridItemHeight WRITE SetGridItemHeight DESIGNABLE true)
 
 	bool gridMode = false;
-	int maxWidth = 100;
-	int renderedWidth = 100;
+	int minWidth = 80;
+	int maxWidth = 160;
+	int renderedWidth = 160;
 	int imagePlacement = 0;
 	int textPosition = 1;
 
@@ -20,9 +21,11 @@ public:
 	enum { PlayingRole = Qt::UserRole + 1 };
 	void SetGridMode(bool grid);
 	bool GetGridMode() const;
-	void SetCardAppearance(int size, int image, int text);
+	void SetCardAppearance(int minimumSize, int maximumSize, int image, int text);
 	int GetImagePlacement() const { return imagePlacement; }
 	int GetTextPosition() const { return textPosition; }
+	int GetMinimumGridItemWidth() const { return minWidth; }
+	int GetMaximumGridItemWidth() const { return maxWidth; }
 
 	void SetGridItemWidth(int width);
 	void SetGridItemHeight(int height);

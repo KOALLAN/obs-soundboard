@@ -29,8 +29,8 @@ bool addMonitoringDevice(void *data, const char *name, const char *id)
 }
 } // namespace
 
-SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork_, int buttonSize_, int imagePlacement_,
-				     int textPosition_, QWidget *parent)
+SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork_, int minimumButtonSize_,
+				     int maximumButtonSize_, int imagePlacement_, int textPosition_, QWidget *parent)
 	: QDialog(parent)
 {
 	setWindowTitle(QTStr("SoundboardSettings"));
@@ -57,11 +57,18 @@ SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork
 	formLayout->addRow(QTStr("MonitoringDevice"), deviceLayout);
 	formLayout->addRow(QString(), hideArtworkCheckBox);
 
-	buttonSizeSpinBox = new QSpinBox(this);
-	buttonSizeSpinBox->setRange(64, 256);
-	buttonSizeSpinBox->setSuffix(QStringLiteral(" px"));
-	buttonSizeSpinBox->setValue(buttonSize_);
-	buttonSizeSpinBox->setToolTip(QTStr("ButtonSize.Tooltip"));
+	minimumButtonSizeSpinBox = new QSpinBox(this);
+	minimumButtonSizeSpinBox->setRange(64, 256);
+	minimumButtonSizeSpinBox->setSuffix(QStringLiteral(" px"));
+	minimumButtonSizeSpinBox->setValue(qBound(64, minimumButtonSize_, 256));
+	minimumButtonSizeSpinBox->setToolTip(QTStr("MinimumButtonSize.Tooltip"));
+
+	maximumButtonSizeSpinBox = new QSpinBox(this);
+	maximumButtonSizeSpinBox->setRange(minimumButtonSizeSpinBox->value(), 256);
+	maximumButtonSizeSpinBox->setSuffix(QStringLiteral(" px"));
+	maximumButtonSizeSpinBox->setValue(qBound(minimumButtonSizeSpinBox->value(), maximumButtonSize_, 256));
+	maximumButtonSizeSpinBox->setToolTip(QTStr("MaximumButtonSize.Tooltip"));
+	minimumButtonSizeSpinBox->setMaximum(maximumButtonSizeSpinBox->value());
 
 	imagePlacementComboBox = new QComboBox(this);
 	imagePlacementComboBox->addItem(QTStr("ImagePlacement.Top"));
@@ -74,7 +81,8 @@ SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork
 	textPositionComboBox->addItem(QTStr("TextPosition.Bottom"));
 	textPositionComboBox->setCurrentIndex(textPosition_);
 
-	formLayout->addRow(QTStr("ButtonSize"), buttonSizeSpinBox);
+	formLayout->addRow(QTStr("MinimumButtonSize"), minimumButtonSizeSpinBox);
+	formLayout->addRow(QTStr("MaximumButtonSize"), maximumButtonSizeSpinBox);
 	formLayout->addRow(QTStr("ImagePlacement"), imagePlacementComboBox);
 	formLayout->addRow(QTStr("TextPosition"), textPositionComboBox);
 	QLabel *appearanceNotice = new QLabel(QTStr("CardAppearanceNotice"), this);
@@ -96,6 +104,10 @@ SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork
 	mainLayout->addLayout(buttonLayout);
 
 	connect(refreshButton, &QPushButton::clicked, this, &SoundboardSettings::reloadDevices);
+	connect(minimumButtonSizeSpinBox, qOverload<int>(&QSpinBox::valueChanged), maximumButtonSizeSpinBox,
+		[this](int value) { maximumButtonSizeSpinBox->setMinimum(value); });
+	connect(maximumButtonSizeSpinBox, qOverload<int>(&QSpinBox::valueChanged), minimumButtonSizeSpinBox,
+		[this](int value) { minimumButtonSizeSpinBox->setMaximum(value); });
 	connect(restartButton, &QPushButton::clicked, this, [this]() {
 		obs_reset_audio_monitoring();
 		QMessageBox::information(this, QTStr("RestartMonitoring"), QTStr("MonitoringRestarted"));
@@ -152,9 +164,14 @@ QString SoundboardSettings::deviceName() const
 	return monitoringDeviceComboBox->currentText();
 }
 
-int SoundboardSettings::buttonSize() const
+int SoundboardSettings::minimumButtonSize() const
 {
-	return buttonSizeSpinBox->value();
+	return minimumButtonSizeSpinBox->value();
+}
+
+int SoundboardSettings::maximumButtonSize() const
+{
+	return maximumButtonSizeSpinBox->value();
 }
 
 int SoundboardSettings::imagePlacement() const
