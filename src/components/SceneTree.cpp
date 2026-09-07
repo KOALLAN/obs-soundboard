@@ -73,11 +73,7 @@ void SceneTree::UpdateGridSize()
 	if (gridMode) {
 		constexpr int minimumGap = 4;
 		const int minimum = maxWidth + minimumGap;
-		// QListView needs a few logical pixels beyond the nominal grid cells
-		// for its internal layout. Without this allowance, a row that fits
-		// exactly can wrap its last card, especially with Windows DPI scaling.
-		constexpr int layoutAllowance = 4;
-		const int width = qMax(minimum, viewport()->contentsRect().width() - layoutAllowance);
+		const int width = qMax(minimum, viewport()->contentsRect().width());
 		// Gaps exist only between cards, not after the final card. Near a
 		// column boundary, reduce the rendered side by at most the gap width
 		// so Qt can keep the extra column without sacrificing visible spacing.

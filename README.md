@@ -47,6 +47,10 @@ Right-click inside the dock to rename or duplicate a sound, open the source filt
 
 Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
 
+### New in 2.0.7: DPI boundary correction
+
+Version 2.0.7 removes the obsolete fixed layout allowance that could still prevent the final column from appearing under Windows display scaling. The adaptive card-size calculation introduced in 2.0.6 already provides the necessary safety at column boundaries, so the complete viewport width can now be used.
+
 ### New in 2.0.6: full-width grid rows
 
 Version 2.0.6 counts the 4 px spacing only between adjacent cards, instead of reserving another gap after the final card. Near a column boundary, cards may render up to 3 logical pixels smaller than the configured size so an additional column fits while the minimum visible spacing is preserved. This removes the unused card-sized area at the right side of the dock.
@@ -127,6 +131,10 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+
+### Novidades da 2.0.7: correção no limite com escala de tela
+
+A versão 2.0.7 remove a antiga margem preventiva fixa que ainda podia impedir a última coluna quando o Windows usava escala de tela. O ajuste adaptável de até 3 pixels introduzido na 2.0.6 já protege os limites do layout, permitindo agora usar toda a largura real do painel.
 
 ### Novidades da 2.0.6: linhas ocupando toda a largura
 
