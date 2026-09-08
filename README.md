@@ -15,6 +15,9 @@ This fork is based on [cg2121/obs-soundboard](https://github.com/cg2121/obs-soun
 - Image layout: fit the whole image at the top or center-crop it to fill the button.
 - Text at the top, center or bottom, horizontally centered.
 - An optional PNG, JPG, WebP or BMP image for every sound card.
+- Optional automatic cover matching: the newest image with the same base name as the audio is selected from its folder.
+- One-click cover refresh for all sounds, plus an individual refresh action for each card.
+- Missing audio is marked with a red border and can be located again or removed directly from the warning.
 - Per-sound hotkeys, looping, renaming, duplication and drag-to-reorder.
 - Grid and list layouts.
 - Native OBS monitoring-device selection from the Soundboard settings.
@@ -42,11 +45,20 @@ The toolbar at the bottom of the Soundboard dock provides the main actions:
 | **+** | Add a sound, choose its audio file, volume, loop state and optional card image. |
 | **−** | Remove the selected sound. |
 | **Pencil** | Edit the selected sound and its card image. |
-| **Gear** | Configure minimum and maximum button sizes, image layout, text position, native monitoring and embedded artwork visibility. |
+| **Circular arrow** | Find and refresh matching covers for all sounds. |
+| **Gear** | Configure minimum and maximum button sizes, image layout, text position, automatic cover matching, native monitoring and embedded artwork visibility. |
 
-Right-click inside the dock to rename or duplicate a sound, open the source filters, or switch between list and grid layouts. Hotkeys can be assigned under **Settings > Hotkeys** in OBS.
+Right-click a sound to refresh only its cover, rename, edit, duplicate or delete its button. Right-click inside the dock to open source filters or switch between list and grid layouts. Hotkeys can be assigned under **Settings > Hotkeys** in OBS.
 
-Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
+Card images are referenced by their original file path and are never copied into the plugin folder. A manual cover remains selected until a requested automatic refresh finds a matching image. If no match exists, the current cover is preserved. When several supported images share the audio's base name, the most recently modified one is used.
+
+### New in 2.0.10: automatic covers and missing-file recovery
+
+Version 2.0.10 can match card covers without copying or caching images. Enable **Find a cover automatically when adding sounds** in Soundboard Settings to look beside every newly added local audio file. Enabling the option for the first time also refreshes existing cards. The circular-arrow toolbar action repeats the search for all sounds; **Refresh this button's cover** in the context menu updates only the selected sound.
+
+Matching is case-insensitive and uses the complete filename without the final extension. PNG, JPG, JPEG, WebP and BMP are supported. If more than one matching image exists, the file with the newest modification time wins. A search that finds nothing leaves the current cover untouched, so manually chosen artwork remains stable until another matching refresh is explicitly requested.
+
+If a saved local audio file has been moved or deleted, its card receives a red border. Clicking it shows **Directory changed** with actions to locate the audio again, delete the button or cancel. Reconnecting the file updates the stored path without recreating the sound. The per-card context menu also provides a clearly labelled **Delete button** action. These behaviors were confirmed by the user in the portable Windows build before publication.
 
 ### New in 2.0.9: deterministic full-row layout
 
@@ -126,6 +138,9 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 - imagem inteira na parte de cima ou preenchendo o botão com recorte central, sem distorção;
 - texto em cima, no centro ou embaixo, sempre centralizado horizontalmente;
 - imagem opcional em PNG, JPG, WebP ou BMP para cada botão;
+- localização automática opcional da capa mais recente com o mesmo nome-base do áudio;
+- atualização de capas para todos os sons ou individualmente em cada botão;
+- contorno vermelho quando o áudio não é encontrado, com opções para localizá-lo novamente ou apagar o botão;
 - atalhos, repetição, renomeação, duplicação e reorganização dos sons;
 - modos de visualização em grade e lista;
 - seleção do dispositivo global de monitoramento usando a função nativa do OBS;
@@ -144,7 +159,15 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
-As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+As imagens continuam no local original e ficam apenas vinculadas pelo caminho; nada é copiado para a pasta do plugin. Uma capa manual permanece até que uma atualização automática solicitada encontre outra imagem correspondente. Se não houver correspondência, a capa atual não é alterada. Havendo várias imagens compatíveis com o mesmo nome-base, vence a modificada mais recentemente.
+
+### Novidades da 2.0.10: capas automáticas e recuperação de arquivos
+
+A versão 2.0.10 localiza capas sem copiar imagens nem criar cache. Ative **Localizar capa automaticamente ao adicionar sons** nas Configurações do Soundboard para procurar uma imagem ao lado de cada novo arquivo de áudio local. Ao ativar a opção pela primeira vez, os botões existentes também são atualizados. O botão de seta circular repete a busca para todos os sons; **Atualizar capa deste botão**, no menu de contexto, altera somente o som selecionado.
+
+A correspondência ignora maiúsculas e minúsculas e compara o nome completo sem a última extensão. São aceitos PNG, JPG, JPEG, WebP e BMP. Quando mais de uma imagem corresponde ao áudio, é utilizada a que foi modificada mais recentemente. Se a busca não encontrar nada, a capa atual é preservada; assim, uma imagem escolhida manualmente só muda quando uma nova atualização solicitada encontra uma correspondência.
+
+Se um áudio local salvo for movido ou apagado, seu cartão recebe contorno vermelho. Ao clicar nele, a mensagem **Diretório alterado** oferece as opções de localizar novamente o áudio, apagar o botão ou cancelar. Ao reconectar o arquivo, o caminho salvo é atualizado sem recriar o som. O menu individual também passa a mostrar claramente a ação **Apagar botão**. Esses comportamentos foram confirmados pelo usuário no OBS portátil para Windows antes da publicação.
 
 ### Novidades da 2.0.9: preenchimento determinístico das linhas
 

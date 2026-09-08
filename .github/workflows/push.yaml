@@ -89,16 +89,18 @@ jobs:
             done
           done
 
-      - name: Generate Checksums 🪪
+      - name: Generate Release Notes and Checksums 🪪
         if: fromJSON(steps.check.outputs.validTag)
         run: |
-          : Generate Checksums 🪪
+          : Generate Release Notes and Checksums 🪪
           if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
           shopt -s extglob
 
-          echo "### Checksums" > ${{ github.workspace }}/CHECKSUMS.txt
-          for file in ${{ github.workspace }}/@(*.exe|*.deb|*.ddeb|*.pkg|*.tar.xz|*.zip); do
-            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" >> ${{ github.workspace }}/CHECKSUMS.txt
+          cp .github/RELEASE_NOTES.md ${{ github.workspace }}/RELEASE_BODY.md
+          echo >> ${{ github.workspace }}/RELEASE_BODY.md
+          echo "### Checksum" >> ${{ github.workspace }}/RELEASE_BODY.md
+          for file in ${{ github.workspace }}/*-windows-x64-Portable.zip; do
+            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" >> ${{ github.workspace }}/RELEASE_BODY.md
           done
 
       - name: Create Release 🛫
@@ -106,15 +108,10 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564
         with:
-          draft: true
+          draft: false
           prerelease: ${{ fromJSON(steps.check.outputs.prerelease) }}
           tag_name: ${{ steps.check.outputs.version }}
           name: ${{ needs.build-project.outputs.pluginName }} ${{ steps.check.outputs.version }}
-          body_path: ${{ github.workspace }}/CHECKSUMS.txt
+          body_path: ${{ github.workspace }}/RELEASE_BODY.md
           files: |
-            ${{ github.workspace }}/*.exe
-            ${{ github.workspace }}/*.zip
-            ${{ github.workspace }}/*.pkg
-            ${{ github.workspace }}/*.deb
-            ${{ github.workspace }}/*.ddeb
-            ${{ github.workspace }}/*.tar.xz
+            ${{ github.workspace }}/*-windows-x64-Portable.zip
