@@ -52,9 +52,9 @@ Right-click a sound to refresh only its cover, rename, edit, duplicate or delete
 
 Card images are referenced by their original file path and are never copied into the plugin folder. A manual cover remains selected until a requested automatic refresh finds a matching image. If no match exists, the current cover is preserved. When several supported images share the audio's base name, the most recently modified one is used.
 
-### New in 2.0.10: automatic covers and missing-file recovery
+### New in 2.1.0: automatic covers and missing-file recovery
 
-Version 2.0.10 can match card covers without copying or caching images. Enable **Find a cover automatically when adding sounds** in Soundboard Settings to look beside every newly added local audio file. Enabling the option for the first time also refreshes existing cards. The circular-arrow toolbar action repeats the search for all sounds; **Refresh this button's cover** in the context menu updates only the selected sound.
+Version 2.1.0 can match card covers without copying or caching images. Enable **Find a cover automatically when adding sounds** in Soundboard Settings to look beside every newly added local audio file. Enabling the option for the first time also refreshes existing cards. The circular-arrow toolbar action repeats the search for all sounds; **Refresh this button's cover** in the context menu updates only the selected sound.
 
 Matching is case-insensitive and uses the complete filename without the final extension. PNG, JPG, JPEG, WebP and BMP are supported. If more than one matching image exists, the file with the newest modification time wins. A search that finds nothing leaves the current cover untouched, so manually chosen artwork remains stable until another matching refresh is explicitly requested.
 
@@ -161,9 +161,9 @@ Os sons das versões anteriores são preservados. Sons antigos continuam com vol
 
 As imagens continuam no local original e ficam apenas vinculadas pelo caminho; nada é copiado para a pasta do plugin. Uma capa manual permanece até que uma atualização automática solicitada encontre outra imagem correspondente. Se não houver correspondência, a capa atual não é alterada. Havendo várias imagens compatíveis com o mesmo nome-base, vence a modificada mais recentemente.
 
-### Novidades da 2.0.10: capas automáticas e recuperação de arquivos
+### Novidades da 2.1.0: capas automáticas e recuperação de arquivos
 
-A versão 2.0.10 localiza capas sem copiar imagens nem criar cache. Ative **Localizar capa automaticamente ao adicionar sons** nas Configurações do Soundboard para procurar uma imagem ao lado de cada novo arquivo de áudio local. Ao ativar a opção pela primeira vez, os botões existentes também são atualizados. O botão de seta circular repete a busca para todos os sons; **Atualizar capa deste botão**, no menu de contexto, altera somente o som selecionado.
+A versão 2.1.0 localiza capas sem copiar imagens nem criar cache. Ative **Localizar capa automaticamente ao adicionar sons** nas Configurações do Soundboard para procurar uma imagem ao lado de cada novo arquivo de áudio local. Ao ativar a opção pela primeira vez, os botões existentes também são atualizados. O botão de seta circular repete a busca para todos os sons; **Atualizar capa deste botão**, no menu de contexto, altera somente o som selecionado.
 
 A correspondência ignora maiúsculas e minúsculas e compara o nome completo sem a última extensão. São aceitos PNG, JPG, JPEG, WebP e BMP. Quando mais de uma imagem corresponde ao áudio, é utilizada a que foi modificada mais recentemente. Se a busca não encontrar nada, a capa atual é preservada; assim, uma imagem escolhida manualmente só muda quando uma nova atualização solicitada encontra uma correspondência.
 

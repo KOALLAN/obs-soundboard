@@ -34,6 +34,8 @@ jobs:
       run:
         shell: bash
     steps:
+      - uses: actions/checkout@v4
+
       - name: Check Release Tag ☑️
         id: check
         run: |
