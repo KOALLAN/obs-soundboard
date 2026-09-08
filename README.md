@@ -48,6 +48,12 @@ Right-click inside the dock to rename or duplicate a sound, open the source filt
 
 Card images are referenced by their file path. If an image is moved or deleted, the sound remains available and its card falls back to text-only display.
 
+### New in 2.0.9: deterministic full-row layout
+
+Version 2.0.9 fixes the remaining empty card-sized area at the right side of the dock. The responsive size calculation was correct, but Qt's automatic `QListView` wrapping made a second, independent column decision and could still move the final card to the next row.
+
+Grid cards are now positioned explicitly after their responsive size and column count are calculated. This guarantees the intended number of columns, preserves the compact 4 px gap and splits unused width equally between the left and right margins. Positions are recalculated after resizing, adding or reordering sounds. Selection, playback indication and drag-to-reorder remain available. The correction was verified in the portable Windows build before publication.
+
 ### New in 2.0.8: responsive and centered cards
 
 Version 2.0.8 replaces the fixed card size with configurable minimum and maximum sizes. The grid chooses how many columns fit at the minimum size, then grows every square card evenly until the configured maximum is reached. The 4 px gap stays compact instead of absorbing unused width, and any remaining space is split equally between the left and right sides of the grid.
@@ -139,6 +145,12 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens ficam vinculadas ao caminho do arquivo escolhido. Se uma imagem for movida ou apagada, o áudio continua funcionando e o cartão volta a mostrar somente o texto.
+
+### Novidades da 2.0.9: preenchimento determinístico das linhas
+
+A versão 2.0.9 corrige o espaço restante do tamanho de um cartão no lado direito do painel. O cálculo responsivo estava correto, mas a quebra automática do `QListView` do Qt fazia uma segunda decisão independente sobre as colunas e ainda podia empurrar o último botão para a linha seguinte.
+
+Agora os cartões são posicionados explicitamente depois do cálculo do tamanho responsivo e da quantidade de colunas. Isso garante a quantidade esperada de botões por linha, preserva a distância compacta de 4 px e divide igualmente a largura restante entre as margens esquerda e direita. As posições são recalculadas ao redimensionar o painel, adicionar ou reorganizar sons. A seleção, o indicador de reprodução e o arrastar para reorganizar continuam disponíveis. A correção foi confirmada no OBS portátil para Windows antes da publicação.
 
 ### Novidades da 2.0.8: botões responsivos e centralizados
 
