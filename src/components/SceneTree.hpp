@@ -11,9 +11,12 @@ class SceneTree : public QListWidget {
 	Q_PROPERTY(int gridItemHeight READ GetGridItemHeight WRITE SetGridItemHeight DESIGNABLE true)
 
 	bool gridMode = false;
+	bool layoutUpdateInProgress = false;
 	int minWidth = 80;
 	int maxWidth = 160;
 	int renderedWidth = 160;
+	int gridColumns = 1;
+	int gridLeft = 0;
 	int imagePlacement = 0;
 	int textPosition = 1;
 
@@ -38,6 +41,7 @@ public:
 private:
 	void RefreshLayout();
 	void UpdateGridSize();
+	void PositionGridItems();
 
 protected:
 	virtual void showEvent(QShowEvent *event) override;

@@ -22,7 +22,9 @@ void SceneTree::SetGridMode(bool grid)
 	parent()->setProperty("class", grid ? "list-grid" : "");
 	gridMode = grid;
 	setViewMode(grid ? QListView::IconMode : QListView::ListMode);
-	setResizeMode(QListView::Adjust);
+	// Grid positions are calculated explicitly. Letting QListView adjust them
+	// again would reintroduce its independent column-wrapping decision.
+	setResizeMode(grid ? QListView::Fixed : QListView::Adjust);
 	setMovement(QListView::Snap);
 	setUniformItemSizes(true);
 	setWordWrap(grid);
@@ -73,38 +75,46 @@ void SceneTree::UpdateGridSize()
 {
 	QSize cell;
 	renderedWidth = maxWidth;
+	gridColumns = 1;
+	gridLeft = 0;
 	if (gridMode) {
 		constexpr int minimumGap = 4;
-		constexpr int layoutSafety = 1;
-		const QMargins oldMargins = viewportMargins();
-		const int width = qMax(minWidth + minimumGap + layoutSafety,
-				       viewport()->contentsRect().width() + oldMargins.left() + oldMargins.right());
-		const int columnsByMinimum = qMax(1, (width - layoutSafety) / (minWidth + minimumGap));
-		const int columns = qMin(qMax(1, count()), columnsByMinimum);
+		const int width = qMax(minWidth + minimumGap, viewport()->contentsRect().width());
+		const int columnsByMinimum = qMax(1, width / (minWidth + minimumGap));
+		gridColumns = qMin(qMax(1, count()), columnsByMinimum);
 
 		// Grow every card with the dock until the configured maximum is
-		// reached. A one-pixel safety allowance prevents QListView from
-		// wrapping the final column at exact DPI-scaled boundaries.
-		renderedWidth = qBound(minWidth, (width - layoutSafety) / columns - minimumGap, maxWidth);
+		// reached. The positions are applied explicitly after QListView has
+		// prepared its item rectangles, so its own wrap threshold is bypassed.
+		renderedWidth = qBound(minWidth, width / gridColumns - minimumGap, maxWidth);
 		const int cellWidth = renderedWidth + minimumGap;
-		const int contentWidth = columns * cellWidth + layoutSafety;
-		const int spareWidth = qMax(0, width - contentWidth);
-		const int leftMargin = spareWidth / 2;
-		const int rightMargin = spareWidth - leftMargin;
-		if (oldMargins.left() != leftMargin || oldMargins.right() != rightMargin || oldMargins.top() != 0 ||
-		    oldMargins.bottom() != 0)
-			setViewportMargins(leftMargin, 0, rightMargin, 0);
-
+		gridLeft = qMax(0, (width - gridColumns * cellWidth) / 2);
 		cell = QSize(cellWidth, cellWidth);
-	} else if (viewportMargins() != QMargins()) {
-		setViewportMargins(0, 0, 0, 0);
 	}
 	if (gridSize() != cell)
 		setGridSize(cell);
 }
 
+void SceneTree::PositionGridItems()
+{
+	if (!gridMode)
+		return;
+
+	const int stepX = qMax(1, gridSize().width());
+	const int stepY = qMax(1, gridSize().height());
+	for (int i = 0; i < count(); i++) {
+		const int column = i % gridColumns;
+		const int row = i / gridColumns;
+		setPositionForIndex(QPoint(gridLeft + column * stepX, row * stepY), model()->index(i, 0));
+	}
+}
+
 void SceneTree::RefreshLayout()
 {
+	if (layoutUpdateInProgress)
+		return;
+	layoutUpdateInProgress = true;
+
 	// Recalculate responsive card geometry after restores and data changes.
 	UpdateGridSize();
 	setIconSize(gridMode ? QSize(renderedWidth - 12, renderedWidth - 12) : QSize(32, 32));
@@ -113,7 +123,9 @@ void SceneTree::RefreshLayout()
 		item(i)->setTextAlignment(gridMode ? Qt::AlignCenter : Qt::AlignLeft | Qt::AlignVCenter);
 	}
 	doItemsLayout();
+	PositionGridItems();
 	viewport()->update();
+	layoutUpdateInProgress = false;
 }
 
 void SceneTree::showEvent(QShowEvent *event)
@@ -128,8 +140,7 @@ void SceneTree::resizeEvent(QResizeEvent *event)
 {
 	QListWidget::resizeEvent(event);
 	// Resize cards within their configured range and keep the grid centered.
-	UpdateGridSize();
-	scheduleDelayedItemsLayout();
+	RefreshLayout();
 }
 
 void SceneTree::startDrag(Qt::DropActions supportedActions)
@@ -160,9 +171,10 @@ void SceneTree::dropEvent(QDropEvent *event)
 	if (gridMode && !selectedIndexes().isEmpty()) {
 		const int stepX = qMax(1, gridSize().width());
 		const int stepY = qMax(1, gridSize().height());
-		const int columns = qMax(1, viewport()->width() / stepX);
+		const int columns = gridColumns;
 		const QPoint point = event->position().toPoint();
-		const int x = qBound(0, (point.x() + horizontalScrollBar()->value()) / stepX, columns - 1);
+		const int x = qBound(0, (point.x() + horizontalScrollBar()->value() - gridLeft) / stepX,
+				     columns - 1);
 		const int y = qMax(0, (point.y() + verticalScrollBar()->value()) / stepY);
 		const int row = qBound(0, x + y * columns, count() - 1);
 		QListWidgetItem *moved = takeItem(selectedIndexes().front().row());
