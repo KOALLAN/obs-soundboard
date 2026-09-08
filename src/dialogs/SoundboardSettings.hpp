@@ -13,6 +13,7 @@ class SoundboardSettings : public QDialog {
 private:
 	QCheckBox *monitoringCheckBox = nullptr;
 	QCheckBox *hideArtworkCheckBox = nullptr;
+	QCheckBox *automaticCoversCheckBox = nullptr;
 	QComboBox *monitoringDeviceComboBox = nullptr;
 	QPushButton *refreshButton = nullptr;
 	QPushButton *restartButton = nullptr;
@@ -24,11 +25,12 @@ private:
 	void reloadDevices();
 
 public:
-	SoundboardSettings(bool monitoringEnabled, bool hideArtwork, int minimumButtonSize, int maximumButtonSize,
-			   int imagePlacement, int textPosition, QWidget *parent = nullptr);
+	SoundboardSettings(bool monitoringEnabled, bool hideArtwork, bool automaticCovers, int minimumButtonSize,
+			   int maximumButtonSize, int imagePlacement, int textPosition, QWidget *parent = nullptr);
 
 	bool monitoringEnabled() const;
 	bool hideArtwork() const;
+	bool automaticCovers() const;
 	int minimumButtonSize() const;
 	int maximumButtonSize() const;
 	int imagePlacement() const;

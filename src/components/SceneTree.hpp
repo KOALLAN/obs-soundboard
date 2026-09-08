@@ -21,7 +21,7 @@ class SceneTree : public QListWidget {
 	int textPosition = 1;
 
 public:
-	enum { PlayingRole = Qt::UserRole + 1 };
+	enum { PlayingRole = Qt::UserRole + 1, MissingRole = Qt::UserRole + 2 };
 	void SetGridMode(bool grid);
 	bool GetGridMode() const;
 	void SetCardAppearance(int minimumSize, int maximumSize, int image, int text);

@@ -17,8 +17,11 @@
 #include "models/MediaData.hpp"
 
 #include <QAction>
+#include <QDateTime>
+#include <QDir>
 #include <QDockWidget>
 #include <QDragEnterEvent>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QIcon>
 #include <QLineEdit>
@@ -31,8 +34,12 @@
 #include <QPixmap>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPushButton>
+#include <QStandardPaths>
 #include <QStyle>
+#include <QStringList>
 #include <QTimer>
+#include <QUrl>
 
 #include "moc_Soundboard.cpp"
 
@@ -43,6 +50,20 @@
 
 namespace {
 constexpr const char *HIDE_ARTWORK_FILTER_NAME = "Soundboard - Hide Cover Artwork";
+const QStringList IMAGE_SUFFIXES = {QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"),
+				    QStringLiteral("webp"), QStringLiteral("bmp")};
+
+bool isRemoteAudioPath(const QString &path)
+{
+	const QUrl url(path);
+	return url.isValid() && (url.scheme().compare(QStringLiteral("http"), Qt::CaseInsensitive) == 0 ||
+				 url.scheme().compare(QStringLiteral("https"), Qt::CaseInsensitive) == 0);
+}
+
+bool audioFileMissing(const QString &path)
+{
+	return path.trimmed().isEmpty() || (!isRemoteAudioPath(path) && !QFileInfo::exists(path));
+}
 
 QIcon cardThumbnail(const QString &imagePath)
 {
@@ -121,6 +142,7 @@ Soundboard::Soundboard(QWidget *parent) : QWidget(parent), ui(new Ui_Soundboard)
 	obs_frontend_add_save_callback(onSave, this);
 
 	ui->list->setItemDelegate(new MediaRenameDelegate(ui->list));
+	ui->actionRefreshCovers->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 
 	renameMedia = new QAction(MainStr("Rename"), this);
 	renameMedia->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -261,12 +283,149 @@ void Soundboard::applyItemAppearance(MediaObj *obj, QListWidgetItem *item)
 		return;
 
 	item->setText(obj->getName());
-	item->setToolTip(obj->getName());
+	const bool missing = audioFileMissing(obj->getPath());
+	item->setData(SceneTree::MissingRole, missing);
+	item->setToolTip(missing ? QStringLiteral("%1\n%2").arg(obj->getName(), QTStr("AudioLocationChanged.Tooltip"))
+				 : obj->getName());
 	item->setIcon(cardThumbnail(obj->getImagePath()));
 	if (ui->list->GetGridMode())
 		item->setTextAlignment(Qt::AlignCenter);
 	else
 		item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+}
+
+void Soundboard::setMissingState(MediaObj *obj, bool missing)
+{
+	QListWidgetItem *item = findItem(obj);
+	if (!item)
+		return;
+
+	item->setData(SceneTree::MissingRole, missing);
+	item->setToolTip(missing ? QStringLiteral("%1\n%2").arg(obj->getName(), QTStr("AudioLocationChanged.Tooltip"))
+				 : obj->getName());
+	ui->list->viewport()->update();
+}
+
+QString Soundboard::findMatchingCover(const QString &audioPath) const
+{
+	if (isRemoteAudioPath(audioPath))
+		return {};
+
+	const QFileInfo audioInfo(audioPath);
+	if (!audioInfo.exists() || !audioInfo.isFile())
+		return {};
+
+	const QString audioName = audioInfo.completeBaseName();
+	const QFileInfoList files = QDir(audioInfo.absolutePath()).entryInfoList(QDir::Files | QDir::Readable);
+	QFileInfo newest;
+
+	for (const QFileInfo &candidate : files) {
+		if (!IMAGE_SUFFIXES.contains(candidate.suffix(), Qt::CaseInsensitive) ||
+		    candidate.completeBaseName().compare(audioName, Qt::CaseInsensitive) != 0)
+			continue;
+
+		const bool newer = !newest.exists() || candidate.lastModified() > newest.lastModified();
+		const bool deterministicTie = newest.exists() && candidate.lastModified() == newest.lastModified() &&
+					      candidate.fileName().compare(newest.fileName(), Qt::CaseInsensitive) > 0;
+		if (newer || deterministicTie)
+			newest = candidate;
+	}
+
+	return newest.exists() ? newest.absoluteFilePath() : QString();
+}
+
+bool Soundboard::refreshCover(MediaObj *obj)
+{
+	if (!obj)
+		return false;
+
+	const QString imagePath = findMatchingCover(obj->getPath());
+	if (imagePath.isEmpty())
+		return false;
+
+	obj->setImagePath(imagePath);
+	applyItemAppearance(obj, findItem(obj));
+	return true;
+}
+
+void Soundboard::refreshAllCovers(bool showSummary)
+{
+	int matched = 0;
+	const int total = ui->list->count();
+	for (int i = 0; i < total; i++) {
+		const QString uuid = ui->list->item(i)->data(Qt::UserRole).toString();
+		if (refreshCover(MediaObj::findByUUID(uuid)))
+			matched++;
+	}
+
+	if (matched > 0)
+		obs_frontend_save();
+
+	if (showSummary)
+		QMessageBox::information(this, QTStr("CoversUpdated.Title"),
+					 QTStr("CoversUpdated.Text").arg(matched).arg(total));
+}
+
+void Soundboard::removeMedia(MediaObj *obj)
+{
+	if (!obj)
+		return;
+
+	if (activeMedia == obj) {
+		if (!obs_obj_invalid(source))
+			obs_source_media_stop(source);
+		activeMedia = nullptr;
+		prevPath.clear();
+	}
+
+	QListWidgetItem *item = findItem(obj);
+	if (item)
+		delete ui->list->takeItem(ui->list->row(item));
+	obj->deleteLater();
+	updatePlaybackAppearance();
+	updateActions();
+	obs_frontend_save();
+}
+
+void Soundboard::handleMissingAudio(MediaObj *obj)
+{
+	if (!obj)
+		return;
+
+	setMissingState(obj, true);
+	QMessageBox dialog(QMessageBox::Warning, QTStr("AudioLocationChanged.Title"),
+			   QTStr("AudioLocationChanged.Text").arg(obj->getName()), QMessageBox::NoButton, this);
+	QPushButton *locateButton = dialog.addButton(QTStr("LocateAudio"), QMessageBox::AcceptRole);
+	QPushButton *deleteButton = dialog.addButton(QTStr("DeleteButton"), QMessageBox::DestructiveRole);
+	dialog.addButton(QTStr("Cancel"), QMessageBox::RejectRole);
+	dialog.setDefaultButton(locateButton);
+	dialog.exec();
+
+	if (dialog.clickedButton() == deleteButton) {
+		removeMedia(obj);
+		return;
+	}
+	if (dialog.clickedButton() != locateButton)
+		return;
+
+	QString folder = QFileInfo(obj->getPath()).absolutePath();
+	if (!QDir(folder).exists())
+		folder = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+
+	const QString fileName = QFileDialog::getOpenFileName(this, QTStr("LocateAudio"), folder,
+							    QStringLiteral("Audio (*.mp3 *.aac *.ogg *.wav *.flac)"));
+	if (fileName.isEmpty())
+		return;
+
+	obj->setPath(fileName);
+	setMissingState(obj, false);
+	if (automaticCovers && obj->getImagePath().isEmpty())
+		refreshCover(obj);
+	else
+		applyItemAppearance(obj, findItem(obj));
+	prevPath.clear();
+	obs_frontend_save();
+	play(obj);
 }
 
 OBSDataArray Soundboard::saveMedia()
@@ -312,7 +471,7 @@ void Soundboard::loadMedia(OBSDataArray array)
 
 		OBSDataArrayAutoRelease hotkeyArray = obs_data_get_array(settings, "sound_hotkey");
 
-		MediaObj *obj = add(name, path, imagePath);
+		MediaObj *obj = add(name, path, imagePath, false);
 		obs_hotkey_load(obj->getHotkey(), hotkeyArray);
 		obj->setLoopEnabled(loop);
 		obj->setVolume(volume);
@@ -338,6 +497,7 @@ void Soundboard::save(OBSData saveData)
 	obs_data_set_int(saveData, "dock_area", window->dockWidgetArea(dock));
 	obs_data_set_bool(saveData, "grid_mode", ui->list->GetGridMode());
 	obs_data_set_bool(saveData, "hide_artwork", hideArtwork);
+	obs_data_set_bool(saveData, "automatic_covers", automaticCovers);
 	obs_data_set_int(saveData, "button_size", ui->list->GetMaximumGridItemWidth());
 	obs_data_set_int(saveData, "button_min_size", ui->list->GetMinimumGridItemWidth());
 	obs_data_set_int(saveData, "button_max_size", ui->list->GetMaximumGridItemWidth());
@@ -374,6 +534,8 @@ void Soundboard::load(OBSData saveData)
 
 	obs_data_set_default_bool(saveData, "hide_artwork", true);
 	hideArtwork = obs_data_get_bool(saveData, "hide_artwork");
+	obs_data_set_default_bool(saveData, "automatic_covers", false);
+	automaticCovers = obs_data_get_bool(saveData, "automatic_covers");
 	obs_data_set_default_int(saveData, "button_size", 160);
 	obs_data_set_default_int(saveData, "button_min_size", 80);
 	obs_data_set_default_int(saveData, "button_max_size", 160);
@@ -458,7 +620,14 @@ void Soundboard::clear()
 
 void Soundboard::play(MediaObj *obj)
 {
-	if (!obj || obs_obj_invalid(source))
+	if (!obj)
+		return;
+	if (audioFileMissing(obj->getPath())) {
+		handleMissingAudio(obj);
+		return;
+	}
+	setMissingState(obj, false);
+	if (obs_obj_invalid(source))
 		return;
 
 	QString path = obj->getPath();
@@ -491,12 +660,16 @@ void Soundboard::itemRenamed(MediaObj *obj)
 		applyItemAppearance(obj, item);
 }
 
-MediaObj *Soundboard::add(const QString &name_, const QString &path, const QString &imagePath)
+MediaObj *Soundboard::add(const QString &name_, const QString &path, const QString &imagePath,
+			bool allowAutomaticCover)
 {
 	QString name = getDefaultString(name_);
+	QString resolvedImagePath = imagePath;
+	if (allowAutomaticCover && automaticCovers && resolvedImagePath.isEmpty())
+		resolvedImagePath = findMatchingCover(path);
 
 	MediaObj *obj = new MediaObj(name, path);
-	obj->setImagePath(imagePath);
+	obj->setImagePath(resolvedImagePath);
 
 	QListWidgetItem *item = new QListWidgetItem(name);
 	item->setData(Qt::UserRole, obj->getUUID());
@@ -554,7 +727,12 @@ void Soundboard::on_actionEdit_triggered()
 		obj->setPath(path);
 		obj->setLoopEnabled(loop);
 		obj->setVolume(volume);
-		obj->setImagePath(imagePath);
+		if (automaticCovers && imagePath.isEmpty()) {
+			const QString automaticImage = findMatchingCover(path);
+			obj->setImagePath(automaticImage.isEmpty() ? imagePath : automaticImage);
+		} else {
+			obj->setImagePath(imagePath);
+		}
 		applyItemAppearance(obj, findItem(obj));
 	};
 
@@ -584,6 +762,7 @@ void Soundboard::updateActions()
 
 	ui->actionRemove->setEnabled(enable);
 	ui->actionEdit->setEnabled(enable);
+	ui->actionRefreshCovers->setEnabled(enable);
 
 	for (QAction *action : ui->toolbar->actions()) {
 		QWidget *widget = ui->toolbar->widgetForAction(action);
@@ -614,11 +793,7 @@ void Soundboard::on_actionRemove_triggered()
 	if (reply == QMessageBox::No)
 		return;
 
-	QListWidgetItem *item = findItem(obj);
-	delete ui->list->takeItem(ui->list->row(item));
-	obj->deleteLater();
-
-	updateActions();
+	removeMedia(obj);
 }
 
 void Soundboard::on_actionDuplicate_triggered()
@@ -645,9 +820,9 @@ void Soundboard::on_actionSettings_triggered()
 
 	const bool monitoringEnabled =
 		obs_source_get_monitoring_type(source) != OBS_MONITORING_TYPE_NONE;
-	SoundboardSettings settings(monitoringEnabled, hideArtwork, ui->list->GetMinimumGridItemWidth(),
-				    ui->list->GetMaximumGridItemWidth(), ui->list->GetImagePlacement(),
-				    ui->list->GetTextPosition(), this);
+	SoundboardSettings settings(monitoringEnabled, hideArtwork, automaticCovers,
+				    ui->list->GetMinimumGridItemWidth(), ui->list->GetMaximumGridItemWidth(),
+				    ui->list->GetImagePlacement(), ui->list->GetTextPosition(), this);
 
 	if (settings.exec() != QDialog::Accepted)
 		return;
@@ -675,27 +850,56 @@ void Soundboard::on_actionSettings_triggered()
 							  ? OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT
 							  : OBS_MONITORING_TYPE_NONE);
 
+	const bool enableAutomaticCoversNow = !automaticCovers && settings.automaticCovers();
 	hideArtwork = settings.hideArtwork();
+	automaticCovers = settings.automaticCovers();
 	applyArtworkVisibility();
 	ui->list->SetCardAppearance(settings.minimumButtonSize(), settings.maximumButtonSize(),
 				    settings.imagePlacement(), settings.textPosition());
 	obs_frontend_save();
+	if (enableAutomaticCoversNow)
+		refreshAllCovers();
+}
+
+void Soundboard::on_actionRefreshCovers_triggered()
+{
+	refreshAllCovers();
+}
+
+void Soundboard::refreshSelectedCover()
+{
+	MediaObj *obj = getCurrentMediaObj();
+	if (!obj)
+		return;
+
+	if (refreshCover(obj)) {
+		obs_frontend_save();
+		QMessageBox::information(this, QTStr("CoverUpdated.Title"),
+					 QTStr("CoverUpdated.Text").arg(obj->getName()));
+	} else {
+		QMessageBox::information(this, QTStr("CoverNotFound.Title"),
+					 QTStr("CoverNotFound.Text").arg(QFileInfo(obj->getPath()).completeBaseName()));
+	}
 }
 
 void Soundboard::on_list_customContextMenuRequested(const QPoint &pos)
 {
 	QListWidgetItem *item = ui->list->itemAt(pos);
+	if (item)
+		ui->list->setCurrentItem(item);
 
 	QMenu popup(this);
 
 	popup.addAction(ui->actionAdd);
 	popup.addAction(ui->actionSettings);
+	popup.addAction(ui->actionRefreshCovers);
 	popup.addAction(MainStr("Basic.Filters"), this, [this]() { obs_frontend_open_source_filters(source); });
 	popup.addSeparator();
 
 	if (item) {
 		popup.addAction(renameMedia);
 		popup.addSeparator();
+		popup.addAction(QTStr("RefreshSelectedCover"), this, &Soundboard::refreshSelectedCover);
 		popup.addAction(ui->actionEdit);
 		popup.addAction(ui->actionRemove);
 		popup.addAction(ui->actionDuplicate);
@@ -834,7 +1038,10 @@ void MediaRenameDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
 	initStyleOption(&opt, index);
 	const int side = tree->GetRenderedGridItemWidth();
 	const QRect card(opt.rect.topLeft() + QPoint(qMax(2, (opt.rect.width() - side) / 2), 2), QSize(side, side));
-	const QColor border = index.data(SceneTree::PlayingRole).toBool() ? QColor("#22C55E") : QColor("#2B2E38");
+	const bool missing = index.data(SceneTree::MissingRole).toBool();
+	const QColor border = missing ? QColor("#EF4444")
+				      : index.data(SceneTree::PlayingRole).toBool() ? QColor("#22C55E")
+										     : QColor("#2B2E38");
 	constexpr qreal radius = 8.0;
 	const bool selected = opt.state & QStyle::State_Selected;
 	const bool hovered = opt.state & QStyle::State_MouseOver;

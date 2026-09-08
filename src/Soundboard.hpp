@@ -31,6 +31,7 @@ private:
 
 	bool actionsEnabled = false;
 	bool hideArtwork = true;
+	bool automaticCovers = false;
 
 	QAction *renameMedia = nullptr;
 
@@ -39,6 +40,12 @@ private:
 	void initializeMonitoring();
 	void updatePlaybackAppearance();
 	void applyItemAppearance(MediaObj *obj, QListWidgetItem *item);
+	void setMissingState(MediaObj *obj, bool missing);
+	void handleMissingAudio(MediaObj *obj);
+	void removeMedia(MediaObj *obj);
+	QString findMatchingCover(const QString &audioPath) const;
+	bool refreshCover(MediaObj *obj);
+	void refreshAllCovers(bool showSummary = true);
 
 private slots:
 	void on_list_itemClicked();
@@ -49,8 +56,11 @@ private slots:
 	void on_list_customContextMenuRequested(const QPoint &pos);
 	void on_actionDuplicate_triggered();
 	void on_actionSettings_triggered();
+	void on_actionRefreshCovers_triggered();
+	void refreshSelectedCover();
 
-	MediaObj *add(const QString &name, const QString &path, const QString &imagePath = QString());
+	MediaObj *add(const QString &name, const QString &path, const QString &imagePath = QString(),
+		      bool allowAutomaticCover = true);
 	void play(MediaObj *obj);
 
 	void editMediaName();

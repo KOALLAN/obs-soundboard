@@ -29,8 +29,9 @@ bool addMonitoringDevice(void *data, const char *name, const char *id)
 }
 } // namespace
 
-SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork_, int minimumButtonSize_,
-				     int maximumButtonSize_, int imagePlacement_, int textPosition_, QWidget *parent)
+SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork_, bool automaticCovers_,
+				     int minimumButtonSize_, int maximumButtonSize_, int imagePlacement_,
+				     int textPosition_, QWidget *parent)
 	: QDialog(parent)
 {
 	setWindowTitle(QTStr("SoundboardSettings"));
@@ -43,6 +44,10 @@ SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork
 	hideArtworkCheckBox = new QCheckBox(QTStr("HideArtwork"), this);
 	hideArtworkCheckBox->setChecked(hideArtwork_);
 	hideArtworkCheckBox->setToolTip(QTStr("HideArtwork.Tooltip"));
+
+	automaticCoversCheckBox = new QCheckBox(QTStr("AutomaticCovers"), this);
+	automaticCoversCheckBox->setChecked(automaticCovers_);
+	automaticCoversCheckBox->setToolTip(QTStr("AutomaticCovers.Tooltip"));
 
 	monitoringDeviceComboBox = new QComboBox(this);
 	refreshButton = new QPushButton(QTStr("RefreshDevices"), this);
@@ -85,6 +90,7 @@ SoundboardSettings::SoundboardSettings(bool monitoringEnabled_, bool hideArtwork
 	formLayout->addRow(QTStr("MaximumButtonSize"), maximumButtonSizeSpinBox);
 	formLayout->addRow(QTStr("ImagePlacement"), imagePlacementComboBox);
 	formLayout->addRow(QTStr("TextPosition"), textPositionComboBox);
+	formLayout->addRow(QString(), automaticCoversCheckBox);
 	QLabel *appearanceNotice = new QLabel(QTStr("CardAppearanceNotice"), this);
 	appearanceNotice->setWordWrap(true);
 	formLayout->addRow(appearanceNotice);
@@ -157,6 +163,11 @@ bool SoundboardSettings::monitoringEnabled() const
 bool SoundboardSettings::hideArtwork() const
 {
 	return hideArtworkCheckBox->isChecked();
+}
+
+bool SoundboardSettings::automaticCovers() const
+{
+	return automaticCoversCheckBox->isChecked();
 }
 
 QString SoundboardSettings::deviceName() const

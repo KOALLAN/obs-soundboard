@@ -88,6 +88,8 @@
         <addaction name="separator"/>
         <addaction name="actionEdit"/>
         <addaction name="separator"/>
+		<addaction name="actionRefreshCovers"/>
+		<addaction name="separator"/>
         <addaction name="actionSettings"/>
        </widget>
       </item>
@@ -172,6 +174,20 @@
     <string>icon-gear</string>
    </property>
   </action>
+	<action name="actionRefreshCovers">
+	 <property name="enabled">
+	  <bool>false</bool>
+	 </property>
+	 <property name="text">
+	  <string>RefreshAllCovers</string>
+	 </property>
+	 <property name="toolTip">
+	  <string>RefreshAllCovers</string>
+	 </property>
+	 <property name="iconVisibleInMenu">
+	  <bool>true</bool>
+	 </property>
+	</action>
  </widget>
  <customwidgets>
   <customwidget>
