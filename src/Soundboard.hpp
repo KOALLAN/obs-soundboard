@@ -28,6 +28,7 @@ private:
 	OBSSourceAutoRelease source;
 	std::vector<OBSSignal> playbackSignals;
 	QPointer<MediaObj> activeMedia;
+	QString lastWebsocketPlayingUuid;
 
 	bool actionsEnabled = false;
 	bool hideArtwork = true;

@@ -78,4 +78,19 @@ inline bool registerRequest(obs_websocket_vendor vendor, const char *requestType
 	calldata_free(&data);
 	return success;
 }
+
+inline bool emitEvent(obs_websocket_vendor vendor, const char *eventType, obs_data_t *eventData)
+{
+	if (!ensureProcHandler() || !vendor || !eventType || !std::strlen(eventType) || !eventData)
+		return false;
+
+	calldata_t data = {};
+	calldata_set_ptr(&data, "vendor", vendor);
+	calldata_set_string(&data, "type", eventType);
+	calldata_set_ptr(&data, "data", eventData);
+	proc_handler_call(procHandler(), "vendor_event_emit", &data);
+	const bool success = calldata_bool(&data, "success");
+	calldata_free(&data);
+	return success;
+}
 } // namespace ObsWebSocketApi

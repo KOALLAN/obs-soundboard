@@ -314,6 +314,15 @@ void Soundboard::updatePlaybackAppearance()
 		if (item->data(SceneTree::PlayingRole).toBool() != active)
 			item->setData(SceneTree::PlayingRole, active);
 	}
+
+	if (uuid != lastWebsocketPlayingUuid) {
+		OBSDataAutoRelease eventData = obs_data_create();
+		obs_data_set_string(eventData, "uuid", QT_TO_UTF8(uuid));
+		obs_data_set_string(eventData, "previousUuid", QT_TO_UTF8(lastWebsocketPlayingUuid));
+		obs_data_set_bool(eventData, "playing", !uuid.isEmpty());
+		ObsWebSocketApi::emitEvent(websocketVendor, "PlaybackStateChanged", eventData);
+		lastWebsocketPlayingUuid = uuid;
+	}
 }
 
 void Soundboard::applyItemAppearance(MediaObj *obj, QListWidgetItem *item)
@@ -643,6 +652,7 @@ void Soundboard::clear()
 	ui->mediaControls->countDownTimer = false;
 	ui->mediaControls->SetSource(nullptr);
 	source = nullptr;
+	updatePlaybackAppearance();
 
 	prevPath = "";
 

@@ -1,5 +1,6 @@
 ## Novidades
 
+- Estado real de reprodução enviado ao Macro Deck quando o efeito começa, termina ou é interrompido.
 - Integração com o plugin complementar **KOALLAN OBS Soundboard** para Macro Deck 2.15.0 ou mais recente.
 - Listagem dos botões existentes, reprodução do efeito escolhido e ação separada para parar o efeito atual pelo WebSocket do OBS.
 - Identificadores estáveis salvos com a coleção de cenas, preservando os vínculos configurados no Macro Deck após reiniciar o OBS.
@@ -16,6 +17,7 @@ As imagens continuam em suas pastas originais: o plugin não copia arquivos nem 
 
 ## New features
 
+- Real playback state sent to Macro Deck when an effect starts, finishes or is stopped.
 - Integration with the companion **KOALLAN OBS Soundboard** plugin for Macro Deck 2.15.0 or newer.
 - List existing buttons, play a selected effect and stop the current effect through OBS WebSocket.
 - Stable identifiers saved with the scene collection, preserving Macro Deck bindings after restarting OBS.

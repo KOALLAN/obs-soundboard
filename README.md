@@ -53,6 +53,10 @@ Right-click a sound to refresh only its cover, rename, edit, duplicate or delete
 
 Card images are referenced by their original file path and are never copied into the plugin folder. A manual cover remains selected until a requested automatic refresh finds a matching image. If no match exists, the current cover is preserved. When several supported images share the audio's base name, the most recently modified one is used.
 
+### New in 2.1.2: real-time playback state
+
+Version 2.1.2 emits a scoped `PlaybackStateChanged` vendor event when a Soundboard effect starts, finishes or is stopped. The Macro Deck companion can therefore keep its button state synchronized with the real playback state instead of using a fixed visual timer.
+
 ### New in 2.1.1: Macro Deck connection
 
 Version 2.1.1 exposes three narrowly scoped vendor requests through the OBS WebSocket server: list the existing Soundboard buttons, play one button by its stable identifier and stop the current effect. The identifier is now saved with the scene collection, so configured Macro Deck actions remain linked after OBS restarts.
@@ -170,6 +174,10 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens continuam no local original e ficam apenas vinculadas pelo caminho; nada é copiado para a pasta do plugin. Uma capa manual permanece até que uma atualização automática solicitada encontre outra imagem correspondente. Se não houver correspondência, a capa atual não é alterada. Havendo várias imagens compatíveis com o mesmo nome-base, vence a modificada mais recentemente.
+
+### Novidades da 2.1.2: estado real da reprodução
+
+A versão 2.1.2 envia um evento próprio `PlaybackStateChanged` quando um efeito do Soundboard começa, termina ou é interrompido. Assim, o plugin complementar do Macro Deck consegue manter o estado visual do botão sincronizado com a reprodução real, sem depender de um temporizador fixo.
 
 ### Novidades da 2.1.1: conexão com o Macro Deck
 
