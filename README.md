@@ -53,6 +53,10 @@ Right-click a sound to refresh only its cover, rename, edit, duplicate or delete
 
 Card images are referenced by their original file path and are never copied into the plugin folder. A manual cover remains selected until a requested automatic refresh finds a matching image. If no match exists, the current cover is preserved. When several supported images share the audio's base name, the most recently modified one is used.
 
+### New in 2.1.3: automatic Macro Deck covers
+
+The WebSocket sound list now finds an image beside the audio with the same base name even when no cover was manually assigned to the OBS button. This lets the Macro Deck companion apply prepared covers without asking for an image folder.
+
 ### New in 2.1.2: real-time playback state
 
 Version 2.1.2 emits a scoped `PlaybackStateChanged` vendor event when a Soundboard effect starts, finishes or is stopped. The Macro Deck companion can therefore keep its button state synchronized with the real playback state instead of using a fixed visual timer.
@@ -174,6 +178,10 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens continuam no local original e ficam apenas vinculadas pelo caminho; nada é copiado para a pasta do plugin. Uma capa manual permanece até que uma atualização automática solicitada encontre outra imagem correspondente. Se não houver correspondência, a capa atual não é alterada. Havendo várias imagens compatíveis com o mesmo nome-base, vence a modificada mais recentemente.
+
+### Novidades da 2.1.3: capas automáticas no Macro Deck
+
+A lista enviada pelo WebSocket agora localiza ao lado do áudio uma imagem com o mesmo nome-base, mesmo que nenhuma capa tenha sido atribuída manualmente ao botão do OBS. Assim, o plugin complementar do Macro Deck aplica as capas preparadas sem pedir uma pasta de imagens.
 
 ### Novidades da 2.1.2: estado real da reprodução
 

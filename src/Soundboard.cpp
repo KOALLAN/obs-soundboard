@@ -716,11 +716,15 @@ void Soundboard::websocketListSounds(obs_data_t *responseData)
 		if (!obj)
 			continue;
 
+		QString imagePath = obj->getImagePath();
+		if (imagePath.isEmpty() || !QFileInfo::exists(imagePath))
+			imagePath = findMatchingCover(obj->getPath());
+
 		OBSDataAutoRelease sound = obs_data_create();
 		obs_data_set_string(sound, "uuid", QT_TO_UTF8(obj->getUUID()));
 		obs_data_set_string(sound, "name", QT_TO_UTF8(obj->getName()));
-		obs_data_set_string(sound, "imagePath", QT_TO_UTF8(obj->getImagePath()));
-		obs_data_set_bool(sound, "hasImage", !obj->getImagePath().isEmpty() && QFileInfo::exists(obj->getImagePath()));
+		obs_data_set_string(sound, "imagePath", QT_TO_UTF8(imagePath));
+		obs_data_set_bool(sound, "hasImage", !imagePath.isEmpty() && QFileInfo::exists(imagePath));
 		obs_data_set_bool(sound, "playing", sourcePlaying && activeMedia == obj);
 		obs_data_array_push_back(sounds, sound);
 	}

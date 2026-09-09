@@ -1,5 +1,6 @@
 ## Novidades
 
+- Capas enviadas automaticamente ao Macro Deck quando existe uma imagem com o mesmo nome na pasta do áudio, sem precisar atribuí-la manualmente no OBS.
 - Estado real de reprodução enviado ao Macro Deck quando o efeito começa, termina ou é interrompido.
 - Integração com o plugin complementar **KOALLAN OBS Soundboard** para Macro Deck 2.15.0 ou mais recente.
 - Listagem dos botões existentes, reprodução do efeito escolhido e ação separada para parar o efeito atual pelo WebSocket do OBS.
@@ -17,6 +18,7 @@ As imagens continuam em suas pastas originais: o plugin não copia arquivos nem 
 
 ## New features
 
+- Automatically send a same-name image beside the audio to Macro Deck, without requiring manual cover assignment in OBS.
 - Real playback state sent to Macro Deck when an effect starts, finishes or is stopped.
 - Integration with the companion **KOALLAN OBS Soundboard** plugin for Macro Deck 2.15.0 or newer.
 - List existing buttons, play a selected effect and stop the current effect through OBS WebSocket.
