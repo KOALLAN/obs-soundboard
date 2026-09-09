@@ -1,5 +1,9 @@
 ## Novidades
 
+- Integração com o plugin complementar **KOALLAN OBS Soundboard** para Macro Deck 2.15.0 ou mais recente.
+- Listagem dos botões existentes, reprodução do efeito escolhido e ação separada para parar o efeito atual pelo WebSocket do OBS.
+- Identificadores estáveis salvos com a coleção de cenas, preservando os vínculos configurados no Macro Deck após reiniciar o OBS.
+- Nome e capa do som aplicados automaticamente ao botão do Macro Deck durante a configuração da ação.
 - Localização automática opcional de capas com o mesmo nome-base do áudio.
 - Uso da imagem modificada mais recentemente quando há mais de uma correspondência.
 - Atualização de todas as capas pelo botão de seta circular.
@@ -12,6 +16,10 @@ As imagens continuam em suas pastas originais: o plugin não copia arquivos nem 
 
 ## New features
 
+- Integration with the companion **KOALLAN OBS Soundboard** plugin for Macro Deck 2.15.0 or newer.
+- List existing buttons, play a selected effect and stop the current effect through OBS WebSocket.
+- Stable identifiers saved with the scene collection, preserving Macro Deck bindings after restarting OBS.
+- Automatically apply the sound name and cover to the Macro Deck button while configuring the action.
 - Optional automatic cover matching by audio base name.
 - The most recently modified image is selected when multiple files match.
 - Refresh every cover from the circular-arrow toolbar action.

@@ -53,6 +53,7 @@ target_sources(
     src/dialogs/SoundboardSettings.cpp
     src/models/MediaData.hpp
     src/models/MediaData.cpp
+    src/ObsWebSocketApi.hpp
     src/forms/MediaControls.ui
     src/forms/MediaEdit.ui
     src/forms/Soundboard.ui

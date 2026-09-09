@@ -1,5 +1,6 @@
 #include "Soundboard.hpp"
 #include "ui_Soundboard.h"
+#include "ObsWebSocketApi.hpp"
 
 #include <obs-frontend-api.h>
 #include <obs-hotkey.h>
@@ -38,8 +39,11 @@
 #include <QStandardPaths>
 #include <QStyle>
 #include <QStringList>
+#include <QThread>
 #include <QTimer>
 #include <QUrl>
+
+#include <utility>
 
 #include "moc_Soundboard.cpp"
 
@@ -50,8 +54,43 @@
 
 namespace {
 constexpr const char *HIDE_ARTWORK_FILTER_NAME = "Soundboard - Hide Cover Artwork";
+constexpr const char *WEBSOCKET_VENDOR_NAME = "koallan.obs-soundboard";
 const QStringList IMAGE_SUFFIXES = {QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"),
 				    QStringLiteral("webp"), QStringLiteral("bmp")};
+obs_websocket_vendor websocketVendor = nullptr;
+
+template<typename Function> void runOnSoundboardThread(Soundboard *soundboard, Function &&function)
+{
+	if (!soundboard)
+		return;
+
+	if (QThread::currentThread() == soundboard->thread()) {
+		function();
+		return;
+	}
+
+	QMetaObject::invokeMethod(soundboard, std::forward<Function>(function), Qt::BlockingQueuedConnection);
+}
+
+void websocketGetSounds(obs_data_t *, obs_data_t *responseData, void *privateData)
+{
+	auto *soundboard = static_cast<Soundboard *>(privateData);
+	runOnSoundboardThread(soundboard, [soundboard, responseData]() { soundboard->websocketListSounds(responseData); });
+}
+
+void websocketPlaySound(obs_data_t *requestData, obs_data_t *responseData, void *privateData)
+{
+	auto *soundboard = static_cast<Soundboard *>(privateData);
+	const QString uuid = QString::fromUtf8(obs_data_get_string(requestData, "uuid"));
+	runOnSoundboardThread(soundboard,
+			      [soundboard, uuid, responseData]() { soundboard->websocketPlaySound(uuid, responseData); });
+}
+
+void websocketStopSound(obs_data_t *, obs_data_t *responseData, void *privateData)
+{
+	auto *soundboard = static_cast<Soundboard *>(privateData);
+	runOnSoundboardThread(soundboard, [soundboard, responseData]() { soundboard->websocketStopSound(responseData); });
+}
 
 bool isRemoteAudioPath(const QString &path)
 {
@@ -439,6 +478,7 @@ OBSDataArray Soundboard::saveMedia()
 		MediaObj *obj = MediaObj::findByUUID(uuid);
 
 		OBSDataAutoRelease settings = obs_data_create();
+		obs_data_set_string(settings, "uuid", QT_TO_UTF8(obj->getUUID()));
 		obs_data_set_string(settings, "name", QT_TO_UTF8(obj->getName()));
 		obs_data_set_string(settings, "path", QT_TO_UTF8(obj->getPath()));
 		obs_data_set_bool(settings, "loop", obj->loopEnabled());
@@ -460,10 +500,12 @@ void Soundboard::loadMedia(OBSDataArray array)
 		OBSDataAutoRelease settings = obs_data_array_item(array, i);
 
 		obs_data_set_default_string(settings, "name", obs_module_text("Sound"));
+		obs_data_set_default_string(settings, "uuid", "");
 		obs_data_set_default_double(settings, "volume", 1.0);
 		obs_data_set_default_string(settings, "image_path", "");
 
 		QString name = obs_data_get_string(settings, "name");
+		QString uuid = obs_data_get_string(settings, "uuid");
 		QString path = obs_data_get_string(settings, "path");
 		bool loop = obs_data_get_bool(settings, "loop");
 		float volume = (float)obs_data_get_double(settings, "volume");
@@ -471,7 +513,7 @@ void Soundboard::loadMedia(OBSDataArray array)
 
 		OBSDataArrayAutoRelease hotkeyArray = obs_data_get_array(settings, "sound_hotkey");
 
-		MediaObj *obj = add(name, path, imagePath, false);
+		MediaObj *obj = add(name, path, imagePath, false, uuid);
 		obs_hotkey_load(obj->getHotkey(), hotkeyArray);
 		obj->setLoopEnabled(loop);
 		obj->setVolume(volume);
@@ -652,6 +694,80 @@ void Soundboard::play(MediaObj *obj)
 	updatePlaybackAppearance();
 }
 
+void Soundboard::websocketListSounds(obs_data_t *responseData)
+{
+	OBSDataArrayAutoRelease sounds = obs_data_array_create();
+	const bool sourcePlaying = !obs_obj_invalid(source) &&
+				   obs_source_media_get_state(source) == OBS_MEDIA_STATE_PLAYING;
+
+	for (int i = 0; i < ui->list->count(); ++i) {
+		QListWidgetItem *item = ui->list->item(i);
+		MediaObj *obj = MediaObj::findByUUID(item->data(Qt::UserRole).toString());
+		if (!obj)
+			continue;
+
+		OBSDataAutoRelease sound = obs_data_create();
+		obs_data_set_string(sound, "uuid", QT_TO_UTF8(obj->getUUID()));
+		obs_data_set_string(sound, "name", QT_TO_UTF8(obj->getName()));
+		obs_data_set_string(sound, "imagePath", QT_TO_UTF8(obj->getImagePath()));
+		obs_data_set_bool(sound, "hasImage", !obj->getImagePath().isEmpty() && QFileInfo::exists(obj->getImagePath()));
+		obs_data_set_bool(sound, "playing", sourcePlaying && activeMedia == obj);
+		obs_data_array_push_back(sounds, sound);
+	}
+
+	obs_data_set_bool(responseData, "success", true);
+	obs_data_set_string(responseData, "pluginVersion", PLUGIN_VERSION);
+	obs_data_set_array(responseData, "sounds", sounds);
+}
+
+void Soundboard::websocketPlaySound(const QString &uuid, obs_data_t *responseData)
+{
+	if (uuid.isEmpty()) {
+		obs_data_set_bool(responseData, "success", false);
+		obs_data_set_string(responseData, "error", "A sound UUID is required.");
+		return;
+	}
+
+	MediaObj *obj = MediaObj::findByUUID(uuid);
+	if (!obj) {
+		obs_data_set_bool(responseData, "success", false);
+		obs_data_set_string(responseData, "error", "The selected sound no longer exists.");
+		return;
+	}
+
+	if (audioFileMissing(obj->getPath())) {
+		setMissingState(obj, true);
+		obs_data_set_bool(responseData, "success", false);
+		obs_data_set_string(responseData, "error", "The selected audio file could not be found.");
+		return;
+	}
+
+	if (obs_obj_invalid(source)) {
+		obs_data_set_bool(responseData, "success", false);
+		obs_data_set_string(responseData, "error", "The Soundboard audio source is not ready.");
+		return;
+	}
+
+	play(obj);
+	obs_data_set_bool(responseData, "success", true);
+	obs_data_set_string(responseData, "uuid", QT_TO_UTF8(obj->getUUID()));
+	obs_data_set_string(responseData, "name", QT_TO_UTF8(obj->getName()));
+}
+
+void Soundboard::websocketStopSound(obs_data_t *responseData)
+{
+	if (obs_obj_invalid(source)) {
+		obs_data_set_bool(responseData, "success", false);
+		obs_data_set_string(responseData, "error", "The Soundboard audio source is not ready.");
+		return;
+	}
+
+	obs_source_media_stop(source);
+	activeMedia = nullptr;
+	updatePlaybackAppearance();
+	obs_data_set_bool(responseData, "success", true);
+}
+
 void Soundboard::itemRenamed(MediaObj *obj)
 {
 	QListWidgetItem *item = findItem(obj);
@@ -661,14 +777,14 @@ void Soundboard::itemRenamed(MediaObj *obj)
 }
 
 MediaObj *Soundboard::add(const QString &name_, const QString &path, const QString &imagePath,
-			bool allowAutomaticCover)
+			bool allowAutomaticCover, const QString &uuid)
 {
 	QString name = getDefaultString(name_);
 	QString resolvedImagePath = imagePath;
 	if (allowAutomaticCover && automaticCovers && resolvedImagePath.isEmpty())
 		resolvedImagePath = findMatchingCover(path);
 
-	MediaObj *obj = new MediaObj(name, path);
+	MediaObj *obj = new MediaObj(name, path, uuid);
 	obj->setImagePath(resolvedImagePath);
 
 	QListWidgetItem *item = new QListWidgetItem(name);
@@ -1172,6 +1288,24 @@ void obs_module_post_load(void)
 
 	Soundboard *sb = new Soundboard();
 	obs_frontend_add_dock_by_id("SoundboardDock", obs_module_text("Soundboard"), sb);
+
+	websocketVendor = ObsWebSocketApi::registerVendor(WEBSOCKET_VENDOR_NAME);
+	if (!websocketVendor) {
+		blog(LOG_WARNING, "[obs-soundboard] Unable to register obs-websocket vendor API");
+	} else {
+		const bool getSoundsRegistered =
+			ObsWebSocketApi::registerRequest(websocketVendor, "GetSounds", websocketGetSounds, sb);
+		const bool playSoundRegistered =
+			ObsWebSocketApi::registerRequest(websocketVendor, "PlaySound", websocketPlaySound, sb);
+		const bool stopSoundRegistered =
+			ObsWebSocketApi::registerRequest(websocketVendor, "StopSound", websocketStopSound, sb);
+
+		if (!getSoundsRegistered || !playSoundRegistered || !stopSoundRegistered)
+			blog(LOG_WARNING, "[obs-soundboard] One or more obs-websocket requests could not be registered");
+		else
+			blog(LOG_INFO, "[obs-soundboard] obs-websocket vendor API registered as %s",
+			     WEBSOCKET_VENDOR_NAME);
+	}
 
 	obs_frontend_pop_ui_translation();
 }

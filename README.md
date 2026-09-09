@@ -26,6 +26,7 @@ This fork is based on [cg2121/obs-soundboard](https://github.com/cg2121/obs-soun
 - An option to hide embedded album artwork from the stream or recording without changing the audio.
 - English and Brazilian Portuguese localization.
 - Portable Windows package using the standard OBS `data` and `obs-plugins` folders.
+- Optional Macro Deck integration through OBS WebSocket: list buttons, play a selected effect and stop the current effect.
 
 ## Installation on Windows
 
@@ -51,6 +52,14 @@ The toolbar at the bottom of the Soundboard dock provides the main actions:
 Right-click a sound to refresh only its cover, rename, edit, duplicate or delete its button. Right-click inside the dock to open source filters or switch between list and grid layouts. Hotkeys can be assigned under **Settings > Hotkeys** in OBS.
 
 Card images are referenced by their original file path and are never copied into the plugin folder. A manual cover remains selected until a requested automatic refresh finds a matching image. If no match exists, the current cover is preserved. When several supported images share the audio's base name, the most recently modified one is used.
+
+### New in 2.1.1: Macro Deck connection
+
+Version 2.1.1 exposes three narrowly scoped vendor requests through the OBS WebSocket server: list the existing Soundboard buttons, play one button by its stable identifier and stop the current effect. The identifier is now saved with the scene collection, so configured Macro Deck actions remain linked after OBS restarts.
+
+Use the companion **KOALLAN OBS Soundboard** plugin for Macro Deck 2.15.0 or newer. Configure it with the same host, port and password shown under **Tools > WebSocket Server Settings** in OBS. When a sound is selected while configuring an action, its current name and local cover are applied to the Macro Deck button. The standalone stop action does not require selecting a sound.
+
+The integration does not expose arbitrary OBS controls and does not copy cover files into the OBS plugin directory. OBS WebSocket must be enabled, and both applications must be able to reach the configured address.
 
 ### New in 2.1.0: automatic covers and missing-file recovery
 
@@ -149,6 +158,7 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 - opção para ocultar capas incorporadas sem alterar o áudio;
 - interface em português brasileiro e inglês;
 - pacote portátil para Windows.
+- integração opcional com o Macro Deck pelo WebSocket do OBS, para listar os botões, tocar um efeito escolhido e parar o efeito atual.
 
 ### Instalação
 
@@ -160,6 +170,14 @@ Esta é uma atualização comunitária gratuita e não oficial do **OBS Soundboa
 Os sons das versões anteriores são preservados. Sons antigos continuam com volume de 100% e sem imagem até serem editados.
 
 As imagens continuam no local original e ficam apenas vinculadas pelo caminho; nada é copiado para a pasta do plugin. Uma capa manual permanece até que uma atualização automática solicitada encontre outra imagem correspondente. Se não houver correspondência, a capa atual não é alterada. Havendo várias imagens compatíveis com o mesmo nome-base, vence a modificada mais recentemente.
+
+### Novidades da 2.1.1: conexão com o Macro Deck
+
+A versão 2.1.1 disponibiliza pelo servidor WebSocket do OBS somente três comandos próprios: listar os botões existentes no Soundboard, tocar um botão por seu identificador estável e parar o efeito atual. Esse identificador agora é salvo junto da coleção de cenas, preservando o vínculo configurado no Macro Deck depois que o OBS é reiniciado.
+
+Use o plugin complementar **KOALLAN OBS Soundboard** no Macro Deck 2.15.0 ou mais recente. Na configuração do plugin, informe o mesmo endereço, porta e senha exibidos em **Ferramentas > Configurações do servidor WebSocket** no OBS. Ao escolher um som para uma ação, o nome e a capa local atuais são aplicados automaticamente ao botão do Macro Deck. A ação separada de parar não exige a escolha de um som.
+
+A integração não libera controles genéricos do OBS e não copia as capas para a pasta do plugin do OBS. O servidor WebSocket precisa estar ativado e os dois programas precisam alcançar o endereço configurado.
 
 ### Novidades da 2.1.0: capas automáticas e recuperação de arquivos
 

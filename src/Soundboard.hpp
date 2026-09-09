@@ -60,7 +60,7 @@ private slots:
 	void refreshSelectedCover();
 
 	MediaObj *add(const QString &name, const QString &path, const QString &imagePath = QString(),
-		      bool allowAutomaticCover = true);
+		      bool allowAutomaticCover = true, const QString &uuid = QString());
 	void play(MediaObj *obj);
 
 	void editMediaName();
@@ -81,6 +81,10 @@ public:
 	void load(OBSData saveData);
 
 	void createSource();
+
+	void websocketListSounds(obs_data_t *responseData);
+	void websocketPlaySound(const QString &uuid, obs_data_t *responseData);
+	void websocketStopSound(obs_data_t *responseData);
 
 protected:
 	virtual void dragEnterEvent(QDragEnterEvent *event) override;

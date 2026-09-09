@@ -11,10 +11,14 @@
 
 std::vector<MediaObj *> MediaObj::mediaItems;
 
-MediaObj::MediaObj(const QString &name_, const QString &path_) : name(name_), path(path_)
+MediaObj::MediaObj(const QString &name_, const QString &path_, const QString &uuid_) : name(name_), path(path_)
 {
-	BPtr<char> uuid_ = os_generate_uuid();
-	uuid = uuid_.Get();
+	if (uuid_.isEmpty()) {
+		BPtr<char> generatedUuid = os_generate_uuid();
+		uuid = generatedUuid.Get();
+	} else {
+		uuid = uuid_;
+	}
 
 	QString hotkeyName = QTStr("SoundHotkey").arg(name);
 
@@ -58,7 +62,7 @@ MediaObj *MediaObj::findByUUID(const QString &uuid)
 	return nullptr;
 }
 
-QString MediaObj::getUUID()
+QString MediaObj::getUUID() const
 {
 	return uuid;
 }

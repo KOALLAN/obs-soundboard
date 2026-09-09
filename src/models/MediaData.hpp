@@ -26,13 +26,13 @@ private slots:
 	void released();
 
 public:
-	MediaObj(const QString &name, const QString &path);
+	MediaObj(const QString &name, const QString &path, const QString &uuid = QString());
 	~MediaObj();
 
 	static MediaObj *findByUUID(const QString &uuid);
 	static MediaObj *findByName(const QString &name);
 
-	QString getUUID();
+	QString getUUID() const;
 
 	void setName(const QString &newName);
 	QString getName();
